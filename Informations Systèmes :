@@ -2,7 +2,7 @@ Informations Systèmes :
 
 Nom d’hôte
 Version du noyau
-Uptime (temps de fonctionnement)
+Uptime (temps de fonctionnement en s)
 Charge moyenne
 
 Modèle du CPU
@@ -11,3 +11,6 @@ Utilisation CPU (en %)
 Température CPU
 
 Mémoire totale
+Mémoire libre
+Mémoire utilisée
+Mémoire swap
