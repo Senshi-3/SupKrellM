@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Rapport Linux</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --ok:#1f9d55; --warn:#c07f00; --err:#d64545;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        }
+        html,body{
+            margin:0;
+            padding:0;
+            background: linear-gradient(rgb(11, 16, 32));
+            overflow-x: hidden;
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif
+        }
+        a{
+            text-decoration:none
+        }
+        a:hover{
+            text-decoration:underline
+        } 
+        header{
+            position:sticky;
+            top:0;
+            padding-bottom: 1vw;
+            display: flex;
+            background: linear-gradient(180deg,rgba(11, 16, 32,0.95),rgba(11, 16, 32,0.7));
+            backdrop-filter:blur(5px);
+            z-index:3;
+            border-bottom: 1px solid rgb(33, 50, 107);
+            text-align: center;
+            align-items: center;
+            flex-direction: column;
+            animation: page-allumage 1s forwards;
+            overflow: hidden;
+        }
+        #texte-titre{
+            font-family: "Audiowide", sans-serif;
+            color: rgba(201, 147, 30);
+            text-shadow: 0px 0px 20px rgba(201, 147, 30,0.7);
+        }
+        #navigateur{
+            display: flex;
+            gap: 2vw;
+            align-items:flex-start;
+        }
+        .texte-navigateur{
+            font-family: "Audiowide", sans-serif;
+            color:#4ca3cb;
+            position: relative;
+            animation: entrer-nav-text 1.5s forwards;
+            opacity: 0;
+        }
+        .texte-navigateur:nth-child(1) { animation-delay: 0s; }
+        .texte-navigateur:nth-child(2) { animation-delay: 0.2s; }
+        .texte-navigateur:nth-child(3) { animation-delay: 0.4s; }
+        .texte-navigateur:nth-child(4) { animation-delay: 0.6s; }
+        .texte-navigateur:nth-child(5) { animation-delay: 0.8s; }
+        .texte-navigateur:nth-child(6) { animation-delay: 1s; }
+        .texte-navigateur:nth-child(7) { animation-delay: 1.2s; }
+        .texte-navigateur:nth-child(8) { animation-delay: 1.4s; }
+        
+        main{
+            max-width:60vw;
+            margin:0 auto;
+            padding:16px
+        }
+        h2{
+            color: rgba(201, 147, 30);
+        }
+        .section{
+            margin-top:22px
+        }
+        .spans{
+            background-color: #4ca3cb48;
+            padding: 1%;
+            border-radius: 1em;
+            border: 1px solid #2c627a;
+            display: flex;
+            flex-direction: column;
+        }
+        .label{
+            color: #91c2d89a;
+            font-family: var(--mono);
+            padding-bottom: 5%;
+        }
+        .value{
+            color: #e4e4e4;
+            font-family: var(--mono);
+        }
+        .grid{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2%;
+        }
+
+
+        @keyframes entrer-nav-text {
+            0%{
+                top: 100px;
+                opacity: 0;
+            }
+            100%{
+                top: 0px;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="texte-titre">Rapport système – <span>%%HOSTNAME%%</span></h1>
+        <nav id="navigateur">
+            <a href="#overview" class="texte-navigateur">Vue d’ensemble</a>
+            <a href="#hardware" class="texte-navigateur">Matériel</a>
+            <a href="#memory" class="texte-navigateur">Mémoire</a>
+            <a href="#disks" class="texte-navigateur">Disques</a>
+            <a href="#processes" class="texte-navigateur">Processus</a>
+            <a href="#network" class="texte-navigateur">Réseau</a>
+            <a href="#web" class="texte-navigateur">Services web</a>
+            <a href="#errors" class="texte-navigateur">Erreurs</a>
+        </nav>
+    </header>
+    <main>
+
+        %%SECTION_OVERVIEW_START%%
+        <section id="overview" class="section">
+        <h2>Vue d’ensemble</h2>
+        <div class="grid">
+            <div class="spans">
+                <span class="label">Date de génération</span>
+                <span class="value">%%DATETIME%%</span>
+            </div>
+            <div class="spans">
+                <span class="label">Noyau</span>
+                <span class="value">%%KERNEL%%</span>
+            </div>
+            <div class="spans">
+                <span class="label">Uptime</span>
+                <span class="value">%%UPTIME%%</span>
+            </div>
+        </div>
+        </section>
+        %%SECTION_OVERVIEW_END%%
+
+        %%SECTION_HARDWARE_START%%
+        <section id="hardware" class="section">
+        <h2>Matériel &amp; alimentation</h2>
+        <div class="grid">
+            <div class="card col-6">
+            <div class="muted">Températures</div>
+            <div class="table-wrap" role="region" aria-label="Températures">
+                <table>
+                <caption class="muted">Sondes détectées</caption>
+                <thead><tr><th>Capteur</th><th>Température</th><th>État</th></tr></thead>
+                <tbody>
+                    %%TEMPS_ROWS%%
+                </tbody>
+                </table>
+            </div>
+            </div>
+            <div class="card col-6">
+            <div class="muted">Alimentation</div>
+            <ul>
+                %%POWER_ITEMS%%
+            </ul>
+            </div>
+        </div>
+        </section>
+        %%SECTION_HARDWARE_END%%
+    </main>
+</body>
+
