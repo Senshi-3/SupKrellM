@@ -72,18 +72,21 @@
             padding:16px
         }
         h2{
-            color: rgba(201, 147, 30);
+            color: #2c627a;
         }
         .section{
             margin-top:22px
         }
         .spans{
-            background-color: #4ca3cb48;
-            padding: 1%;
+            background-color: rgba(24, 35, 58, 0.733);
+            padding: 5%;
             border-radius: 1em;
-            border: 1px solid #2c627a;
+            border: 1px solid #5e7d8aab;
             display: flex;
             flex-direction: column;
+        }
+        .spans:hover{
+            box-shadow: 0px 0px 3px 3px #2c627a;
         }
         .label{
             color: #91c2d89a;
@@ -94,11 +97,15 @@
             color: #e4e4e4;
             font-family: var(--mono);
         }
-        .grid{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 2%;
+        .grid1{
+            display:grid;
+            grid-template-columns:repeat(3,1fr);
+            gap:16px
+        }
+        .grid2{
+            display:grid;
+            grid-template-columns:repeat(2,1fr);
+            gap:16px
         }
 
 
@@ -133,7 +140,7 @@
         %%SECTION_OVERVIEW_START%%
         <section id="overview" class="section">
         <h2>Vue d’ensemble</h2>
-        <div class="grid">
+        <div class="grid1">
             <div class="spans">
                 <span class="label">Date de génération</span>
                 <span class="value">%%DATETIME%%</span>
@@ -153,8 +160,8 @@
         %%SECTION_HARDWARE_START%%
         <section id="hardware" class="section">
         <h2>Matériel &amp; alimentation</h2>
-        <div class="grid">
-            <div class="card col-6">
+        <div class="grid2">
+            <div class="spans">
             <div class="muted">Températures</div>
             <div class="table-wrap" role="region" aria-label="Températures">
                 <table>
@@ -166,7 +173,7 @@
                 </table>
             </div>
             </div>
-            <div class="card col-6">
+            <div class="spans">
             <div class="muted">Alimentation</div>
             <ul>
                 %%POWER_ITEMS%%
@@ -177,4 +184,3 @@
         %%SECTION_HARDWARE_END%%
     </main>
 </body>
-
