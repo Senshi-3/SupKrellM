@@ -80,7 +80,16 @@ TEMPLATE =  r"""<!DOCTYPE html>
             scroll-margin-top: 7vw;
         }
         section:target, section:target{
-            animation: pop-highlight 0.3s ease-out;
+            animation: mis-en-évidence 0.3s ease-out;
+        }
+        section:target .spans{
+            animation: bordur-évidence 1s linear;
+        }
+        section:target .spans2{
+            animation: bordur-évidence 1s linear;
+        }
+        section:target .spanserr{
+            animation: bordur-évidence-err 1s linear;
         }
         .spans{
             background-color: rgba(24, 35, 58, 0.733);
@@ -183,7 +192,7 @@ TEMPLATE =  r"""<!DOCTYPE html>
             background:rgba(214,69,69,.08)
         }  
 
-        @keyframes pop-highlight {
+        @keyframes mis-en-évidence {
             0%{
                 transform: scale(1);
             }
@@ -192,6 +201,40 @@ TEMPLATE =  r"""<!DOCTYPE html>
             }
             100%{
                 transform: scale(1);
+            }
+        }
+        @keyframes bordur-évidence {
+            0%{
+                border-color: white;
+                outline: 2px solid white;
+                outline-offset: 0.3vw;
+            }
+            90%{
+                border-color: white;
+                outline: 2px solid white;
+                outline-offset: 0.3vw;
+            }
+            100%{
+                border-color: #5e7d8aab;
+                outline: 0px solid #5e7d8aab;
+                outline-offset: 0vw;
+            }
+        }
+        @keyframes bordur-évidence-err {
+            0%{
+                border-color: var(--err);
+                outline: 2px solid var(--err);
+                outline-offset: 0.3vw;
+            }
+            90%{
+                border-color: var(--err);
+                outline: 2px solid var(--err);
+                outline-offset: 0.3vw;
+            }
+            100%{
+                border-color: var(--err);
+                outline: 2px solid var(--err);
+                outline-offset: 0vw;
             }
         }
 
