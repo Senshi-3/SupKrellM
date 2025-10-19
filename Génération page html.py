@@ -169,9 +169,10 @@ TEMPLATE =  r"""<!DOCTYPE html>
         }
         .badge{
             display:inline-block;
-            padding:.15rem .5rem;
-            border-radius:999px;
-            font-size:.8rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 3em;
+            font-size: 0.6vw;
+            text-align: center;
             border:1px solid #2a366b;
             background:#0e1430;
             color:var(--muted)
@@ -409,7 +410,7 @@ def data():
         "MEM_USED_PCT": "56.9%",
         "MEM_FREE_CACHE": "7.3 Go",
         "FAVICON_DATAURL": "data:;base64,",
-        "TEMPS_ROWS": "<tr><td>CPU</td><td>63.2&nbsp;°C</td><td><span class='badge warn'>élevée</span></td></tr><tr><td>GPU</td><td>54.0&nbsp;°C</td><td><span class='badge ok'>ok</span></td></tr>",
+        "TEMPS_ROWS": "<tr><td>CPU</td><td>63.2&nbsp;°C</td><td><span class='badge warn'>ÉLEVÉE</span></td></tr><tr><td>GPU</td><td>54.0&nbsp;°C</td><td><span class='badge ok'>OK</span></td></tr>",
         "POWER_ITEMS": "<li>Alimentation: secteur — <span class='badge ok'>OK</span></li>",
         "DISK_ROWS": "<tr><td>/dev/sda1</td><td>/</td><td>71%</td><td>11.2&nbsp;Go</td><td>ext4</td></tr><tr><td>/dev/sdb1</td><td>/data</td><td>42%</td><td>212.5&nbsp;Go</td><td>xfs</td></tr>",
         "PROC_ROWS": "<tr><td>1</td><td>root</td><td>0.0</td><td>0.1</td><td>/sbin/init</td></tr><tr><td>2345</td><td>www-data</td><td>12.3</td><td>1.2</td><td>nginx: worker</td></tr><tr><td>4567</td><td>alice</td><td>3.2</td><td>0.8</td><td>python3 script.py</td></tr>",
