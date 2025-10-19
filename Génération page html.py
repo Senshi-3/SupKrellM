@@ -284,7 +284,7 @@ TEMPLATE =  r"""<!DOCTYPE html>
             </div>
         </section>
         <section id="hardware" class="section">
-            <h2>Matériel &amp; alimentation</h2>
+            <h2>Matériel - Alimentation</h2>
             <div class="grid2">
                 <div class="spans">
                     <div class="label">Températures</div>
@@ -367,7 +367,7 @@ TEMPLATE =  r"""<!DOCTYPE html>
                 </div>
         </section>
         <section id="web" class="section">
-            <h2>Services web</h2>
+            <h2>Services Web</h2>
             <div class="spans2">
                 <table>
                     <thead><tr><th>Hôte</th><th>Titre</th><th>Favicon</th><th>Serveur</th><th>Proto/TLS</th><th>Statut</th></tr></thead>
@@ -378,7 +378,7 @@ TEMPLATE =  r"""<!DOCTYPE html>
             </div>
         </section>
         <section id="errors" class="section">
-            <h2 id="erreur-texte">Erreurs de collecte</h2>
+            <h2 id="erreur-texte">Erreurs</h2>
             <div class="spanserr">
                 <ul>
                     %%ERROR_ITEMS%%
