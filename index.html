@@ -16,14 +16,15 @@
             margin:0;
             padding:0;
             background: linear-gradient(rgb(11, 16, 32));
-            overflow-x: hidden;
-            font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+            scroll-behavior: smooth;
         }
         a{
-            text-decoration:none
+            text-decoration:none;
         }
         a:hover{
-            text-decoration:underline
+            text-decoration:underline;
+            transform: scale(1.1);
         } 
         header{
             position:sticky;
@@ -43,7 +44,6 @@
         #texte-titre{
             font-family: "Audiowide", sans-serif;
             color: rgba(201, 147, 30);
-            text-shadow: 0px 0px 20px rgba(201, 147, 30,0.7);
         }
         #navigateur{
             display: flex;
@@ -67,47 +67,86 @@
         .texte-navigateur:nth-child(8) { animation-delay: 1.4s; }
         
         main{
-            max-width:60vw;
+            max-width:55vw;
             margin:0 auto;
-            padding:16px
+            padding:1vw;
         }
         h2{
-            color: #2c627a;
+            color: #287da1;
         }
         .section{
-            margin-top:22px
+            margin-top:2vw;
         }
         .spans{
             background-color: rgba(24, 35, 58, 0.733);
-            padding: 5%;
+            padding: 1vw;
             border-radius: 1em;
             border: 1px solid #5e7d8aab;
             display: flex;
             flex-direction: column;
         }
+        .spans2{
+            background-color: rgba(24, 35, 58, 0);
+            padding: 1vw;
+            border-radius: 1em;
+            border: 1px solid #5e7d8aab;
+            display: flex;
+            flex-direction: column;
+        }
+        .spanserr{
+            border-left: 3px solid var(--err);
+            padding: 1vw;
+            border-radius:12px;
+            background:rgba(214,69,69,.08);
+            margin-bottom:1vw;
+        }
         .spans:hover{
             box-shadow: 0px 0px 3px 3px #2c627a;
+        }
+        .spanserr:hover{
+            box-shadow: 0px 0px 3px 3px #7a2c2c;
         }
         .label{
             color: #91c2d89a;
             font-family: var(--mono);
-            padding-bottom: 5%;
+            padding-bottom: 1vw;
+            user-select: none;
         }
         .value{
-            color: #e4e4e4;
+            color: #c9d1ff;
             font-family: var(--mono);
         }
         .grid1{
             display:grid;
             grid-template-columns:repeat(3,1fr);
-            gap:16px
+            gap:16px;
         }
         .grid2{
             display:grid;
             grid-template-columns:repeat(2,1fr);
-            gap:16px
+            gap:16px;
         }
-
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+        th,td{
+            padding:10px;
+            border-bottom:1px solid #1c2347;
+            text-align:left;
+        }
+        th{
+            font-weight:600;color:#c9d1ff;
+        }
+        #erreur-texte{
+            color: #a12828;
+        }
+        footer{
+            color:#a8b0d9;
+            font-size: 0.8vw;
+            text-align:center;
+            margin: 1vw;
+        }
 
         @keyframes entrer-nav-text {
             0%{
@@ -139,48 +178,149 @@
 
         %%SECTION_OVERVIEW_START%%
         <section id="overview" class="section">
-        <h2>Vue d’ensemble</h2>
-        <div class="grid1">
-            <div class="spans">
-                <span class="label">Date de génération</span>
-                <span class="value">%%DATETIME%%</span>
+            <h2>Vue d’ensemble</h2>
+            <div class="grid1">
+                <div class="spans">
+                    <span class="label">Date de génération</span>
+                    <span class="value">%%DATETIME%%</span>
+                </div>
+                <div class="spans">
+                    <span class="label">Noyau</span>
+                    <span class="value">%%KERNEL%%</span>
+                </div>
+                <div class="spans">
+                    <span class="label">Uptime</span>
+                    <span class="value">%%UPTIME%%</span>
+                </div>
             </div>
-            <div class="spans">
-                <span class="label">Noyau</span>
-                <span class="value">%%KERNEL%%</span>
-            </div>
-            <div class="spans">
-                <span class="label">Uptime</span>
-                <span class="value">%%UPTIME%%</span>
-            </div>
-        </div>
         </section>
         %%SECTION_OVERVIEW_END%%
 
         %%SECTION_HARDWARE_START%%
         <section id="hardware" class="section">
-        <h2>Matériel &amp; alimentation</h2>
-        <div class="grid2">
-            <div class="spans">
-            <div class="muted">Températures</div>
-            <div class="table-wrap" role="region" aria-label="Températures">
-                <table>
-                <caption class="muted">Sondes détectées</caption>
-                <thead><tr><th>Capteur</th><th>Température</th><th>État</th></tr></thead>
-                <tbody>
-                    %%TEMPS_ROWS%%
-                </tbody>
-                </table>
+            <h2>Matériel &amp; alimentation</h2>
+            <div class="grid2">
+                <div class="spans">
+                    <div class="label">Températures</div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Capteur</th><th>Température</th><th>État</th></tr></thead>
+                            <tbody>
+                                %%TEMPS_ROWS%%
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="spans">
+                    <div class="label">Alimentation</div>
+                    <ul>
+                        %%POWER_ITEMS%%
+                    </ul>
+                </div>
             </div>
-            </div>
-            <div class="spans">
-            <div class="muted">Alimentation</div>
-            <ul>
-                %%POWER_ITEMS%%
-            </ul>
-            </div>
-        </div>
         </section>
         %%SECTION_HARDWARE_END%%
+
+        %%SECTION_MEMORY_START%%
+        <section id="memory" class="section">
+            <h2>Mémoire</h2>
+            <div class="grid1">
+                <div class="spans">
+                    <span class="label">Totale</span>
+                    <span class="value">%%MEM_TOTAL%%</span>
+                </div>
+                <div class="spans">
+                    <span class="label">Utilisée</span>
+                    <span class="value">%%MEM_USED%% (%%MEM_USED_PCT%%)</span>
+                </div>
+                <div class="spans">
+                    <span class="label">Libre + cache</span>
+                    <span class="value">%%MEM_FREE_CACHE%%</span>
+                </div>
+            </div>
+        </section>
+        %%SECTION_MEMORY_END%%
+
+        %%SECTION_DISKS_START%%
+        <section id="disks" class="section">
+            <h2>Disques</h2>
+            <div class="spans2">
+                <table>
+                    <thead><tr><th>Périphérique</th><th>Montage</th><th>Utilisation</th><th>Espace libre</th><th>Type</th></tr></thead>
+                    <tbody>
+                        %%DISK_ROWS%%
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        %%SECTION_DISKS_END%%
+
+        %%SECTION_PROCESSES_START%%
+        <section id="processes" class="section">
+            <h2>Processus actifs</h2>
+            <div class="spans2">
+                <table>
+                    <thead><tr><th>PID</th><th>Utilisateur</th><th>CPU %</th><th>RAM %</th><th>Commande</th></tr></thead>
+                    <tbody>
+                        %%PROC_ROWS%%
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        %%SECTION_PROCESSES_END%%
+
+        %%SECTION_NETWORK_START%%
+        <section id="network" class="section">
+        <h2>Réseau</h2>
+            <div class="grid2">
+                <div class="spans">
+                    <div class="label">Interfaces</div>
+                    <div class="table-wrap" role="region" aria-label="Interfaces réseau">
+                        <table>
+                            <thead><tr><th>Interface</th><th>IPv4</th><th>IPv6</th><th>RX/TX</th><th>État</th></tr></thead>
+                            <tbody>
+                                %%NET_IF_ROWS%%
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="spans">
+                    <div class="label">Connexions</div>
+                    <ul>
+                        %%NET_CONN_ITEMS%%
+                    </ul>
+                </div>
+            </div>
+        </section>
+        %%SECTION_NETWORK_END%%
+
+        %%SECTION_WEB_START%%
+        <section id="web" class="section">
+            <h2>Services web</h2>
+            <div class="spans2">
+                <table>
+                    <thead><tr><th>Hôte</th><th>Titre</th><th>Favicon</th><th>Serveur</th><th>Proto/TLS</th><th>Statut</th></tr></thead>
+                    <tbody>
+                        %%WEB_ROWS%%
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        %%SECTION_WEB_END%%
+
+        %%SECTION_ERRORS_START%%
+        <section id="errors" class="section">
+            <h2 id="erreur-texte">Erreurs de collecte</h2>
+            <div class="spanserr">
+                <ul>
+                    %%ERROR_ITEMS%%
+                </ul>
+            </div>
+        </section>
+        %%SECTION_ERRORS_END%%
     </main>
+    <footer>
+        Généré le <span class="value">%%DATETIME%%</span>
+    </footer>
 </body>
+</html>
