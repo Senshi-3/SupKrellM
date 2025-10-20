@@ -215,34 +215,28 @@ TEMPLATE =  r"""<!DOCTYPE html>
         }
         @keyframes bordur-évidence {
             0%{
-                border-color: white;
                 outline: 2px solid white;
                 outline-offset: 0.3vw;
             }
             90%{
-                border-color: white;
                 outline: 1px solid white;
                 outline-offset: 0.3vw;
             }
             100%{
-                border-color: #5e7d8aab;
                 outline: 0px solid #5e7d8aab;
                 outline-offset: 0vw;
             }
         }
         @keyframes bordur-évidence-err {
             0%{
-                border-color: var(--err);
                 outline: 2px solid var(--err);
                 outline-offset: 0.3vw;
             }
             90%{
-                border-color: var(--err);
                 outline: 1px solid var(--err);
                 outline-offset: 0.3vw;
             }
             100%{
-                border-color: var(--err);
                 outline: 0px solid var(--err);
                 outline-offset: 0vw;
             }
