@@ -185,7 +185,7 @@ TEMPLATE =  r"""<!DOCTYPE html>
             text-align: center;
             border:1px solid #2a366b;
             background:#0e1430;
-            color:var(--muted)
+            color:#a8b0d9;
         }
         .ok{
             color:#d6ffe6;
