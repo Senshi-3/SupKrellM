@@ -5,10 +5,11 @@ TEMPLATE =  r"""<!DOCTYPE html>
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Rapport Linux</title>
+    <title>Rapport système - %%HOSTNAME%%</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="icon" href="https://friconix.com/png/fi-cnsuxx-linux.png" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap">
     <style>
         :root{
             --ok:#1f9d55; --warn:#c07f00; --err:#d64545;
