@@ -157,11 +157,9 @@ TEMPLATE =  r"""<!DOCTYPE html>
             color:#c9d1ff;
         }
         th{
-            font-weight: 0.8vw;
             color:#c9d1ff;
         }
         li{
-            font-weight: 0.8vw;
             color:#c9d1ff;
         }
         ul, ol {
