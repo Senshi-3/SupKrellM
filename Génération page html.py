@@ -1,4 +1,4 @@
-import argparse, re, datetime
+import argparse, datetime
 
 TEMPLATE =  r"""<!DOCTYPE html>
 <html lang="fr">
@@ -58,14 +58,14 @@ TEMPLATE =  r"""<!DOCTYPE html>
             animation: entrer-nav-text 1.5s forwards;
             opacity: 0;
         }
-        .texte-navigateur:nth-child(1) { animation-delay: 0s; }
-        .texte-navigateur:nth-child(2) { animation-delay: 0.4s; }
-        .texte-navigateur:nth-child(3) { animation-delay: 0.8s; }
-        .texte-navigateur:nth-child(4) { animation-delay: 1.2s; }
-        .texte-navigateur:nth-child(5) { animation-delay: 1.6s; }
-        .texte-navigateur:nth-child(6) { animation-delay: 2s; }
-        .texte-navigateur:nth-child(7) { animation-delay: 2.4s; }
-        .texte-navigateur:nth-child(8) { animation-delay: 2.8s; }
+        .texte-navigateur:nth-child(1) {animation-delay: 0s;}
+        .texte-navigateur:nth-child(2) {animation-delay: 0.4s;}
+        .texte-navigateur:nth-child(3) {animation-delay: 0.8s;}
+        .texte-navigateur:nth-child(4) {animation-delay: 1.2s;}
+        .texte-navigateur:nth-child(5) {animation-delay: 1.6s;}
+        .texte-navigateur:nth-child(6) {animation-delay: 2s;}
+        .texte-navigateur:nth-child(7) {animation-delay: 2.4s;}
+        .texte-navigateur:nth-child(8) {animation-delay: 2.8s; color: var(--err)}
         
         main{
             max-width:55vw;
@@ -490,10 +490,10 @@ def data():
     }
 
 
-def cli(argv=None):
+def cli():
     p = argparse.ArgumentParser(description="Génère un rapport HTML")
     p.add_argument("--output",default=r"C:\Users\Sensh\OneDrive\Documents\sfvzeg\rapport_supkrellm_demo.html")
-    args = p.parse_args(argv)
+    args = p.parse_args()
     tokens = data()
     html = render_report(TEMPLATE, tokens)
     with open(args.output, "w", encoding="utf-8") as f:
