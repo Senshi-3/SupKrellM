@@ -82,7 +82,10 @@ TEMPLATE =  r"""<!DOCTYPE html>
         section:target, section:target{
             animation: mis-en-évidence 0.3s ease-out;
         }
-        section:target .spans{
+        section:target .grid1{
+            animation: bordur-évidence 1s linear;
+        }
+        section:target .grid2{
             animation: bordur-évidence 1s linear;
         }
         section:target .spans2{
@@ -110,7 +113,7 @@ TEMPLATE =  r"""<!DOCTYPE html>
         .spanserr{
             border-left: 3px solid var(--err);
             padding: 1vw;
-            border-radius:12px;
+            border-radius: 1em;
             background:rgba(214,69,69,.08);
             margin-bottom:1vw;
         }
@@ -134,11 +137,13 @@ TEMPLATE =  r"""<!DOCTYPE html>
             display:grid;
             grid-template-columns:repeat(3,1fr);
             gap:16px;
+            border-radius: 1em;
         }
         .grid2{
             display:grid;
             grid-template-columns:repeat(2,1fr);
             gap:16px;
+            border-radius: 1em;
         }
         table{
             width:100%;
@@ -157,6 +162,10 @@ TEMPLATE =  r"""<!DOCTYPE html>
         li{
             font-weight: 0.8vw;
             color:#c9d1ff;
+        }
+        ul, ol {
+            margin-left: 1vw;
+            padding-left: 1.2rem;
         }
         #erreur-texte{
             color: #a12828;
@@ -212,7 +221,7 @@ TEMPLATE =  r"""<!DOCTYPE html>
             }
             90%{
                 border-color: white;
-                outline: 2px solid white;
+                outline: 1px solid white;
                 outline-offset: 0.3vw;
             }
             100%{
@@ -229,16 +238,15 @@ TEMPLATE =  r"""<!DOCTYPE html>
             }
             90%{
                 border-color: var(--err);
-                outline: 2px solid var(--err);
+                outline: 1px solid var(--err);
                 outline-offset: 0.3vw;
             }
             100%{
                 border-color: var(--err);
-                outline: 2px solid var(--err);
+                outline: 0px solid var(--err);
                 outline-offset: 0vw;
             }
         }
-
         @keyframes entrer-nav-text {
             0%{
                 top: 100px;
@@ -247,6 +255,73 @@ TEMPLATE =  r"""<!DOCTYPE html>
             100%{
                 top: 0px;
                 opacity: 1;
+            }
+        }
+
+        @media (max-width: 767px){
+            #texte-titre{
+                font-size: 4vw;
+            }
+            #navigateur{
+                gap: 1vw;
+            }
+            .texte-navigateur, th, td, li, footer{
+                font-size: 2vw;
+            }
+            main{
+                max-width: 90vw;
+            }
+            h2{
+                font-size: 3vw;
+            }
+            .section{
+                scroll-margin-top: 10vw;
+
+            }
+            .spans, .spans2, .spanserr, .grid1, .grid2{
+                border-radius: 0.5em;
+            }
+            .label, .badge{
+                font-size: 1.7vw;
+            }
+            .value{
+                font-size: 2.3vw;
+            }
+            .grid1, .grid2{
+                gap:7px;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px) {
+            #texte-titre{
+                font-size: 3vw;
+            }
+            #navigateur{
+                gap: 2vw;
+            }
+            .texte-navigateur, th, td, li, footer{
+                font-size: 1.5vw;
+            }
+            main{
+                max-width: 80vw;
+            }
+            h2{
+                font-size: 2.7vw;
+            }
+            .section{
+                scroll-margin-top: 9vw;
+            }
+            .spans, .spans2, .spanserr, .grid1, .grid2{
+                border-radius: 0.5em;
+            }
+            .label, .badge{
+                font-size: 1.3vw;
+            }
+            .value{
+                font-size: 1.8vw;
+            }
+            .grid1, .grid2{
+                gap:10px;
             }
         }
     </style>
