@@ -1,19 +1,19 @@
 Informations Variables :
 
-"HOSTNAME"        → nom du PC  
-"DATETIME"        → date et heure du rapport  
-"KERNEL"          → version du noyau Linux  
-"UPTIME"          → durée depuis le démarrage  
-"MEM_TOTAL"       → mémoire totale  
-"MEM_USED"        → mémoire utilisée  
-"MEM_USED_PCT"    → % de mémoire utilisée  
-"MEM_FREE_CACHE"  → mémoire libre + cache  
-"FAVICON_DATAURL" → icône du rapport  
-"TEMPS_ROWS"      → températures
-"POWER_ITEMS"     → état de l’alim (batterie/secteur) 
-"DISK_ROWS"       → infos des disques 
-"PROC_ROWS"       → liste des processus  
-"NET_IF_ROWS"     → interfaces réseau  
-"NET_CONN_ITEMS"  → connexions réseau actives  
-"WEB_ROWS"        → services web 
-"ERROR_ITEMS"     → erreurs rencontrées
+"NOM_HOTE" → nom du PC 
+"DATE_HEURE" → date et heure du rapport  
+"NOYAU" → version du noyau Linux  
+"DUREE_FONCTIONNEMENT" → durée depuis le démarrage 
+"MEM_TOTALE" → mémoire totale  
+"MEM_UTILISEE" → mémoire utilisée  
+"MEM_UTILISEE_PCT" → % de mémoire utilisée 
+"MEM_LIBRE_CACHE" → mémoire libre + cache
+"LIGNES_TEMPERATURES" → températures
+"ELEMENTS_ALIM" → état de l’alim (batterie/secteur) 
+"LIGNES_DISQUES" → infos des disques 
+"LIGNES_PROCESSUS" → liste des processus  
+"LIGNES_INTERFACES" → interfaces réseau 
+"ELEMENTS_CONNEXIONS" → connexions réseau actives
+"LIGNES_WEB" → services web 
+"ELEMENTS_ERREURS" → erreurs rencontrées
+
