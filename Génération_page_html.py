@@ -298,7 +298,6 @@ MODELE_HTML = r"""<!DOCTYPE html>
             <a href="#erreurs" class="texte-navigateur">Erreurs</a>
         </nav>
     </header>
-
     <main>
         <section id="apercu" class="section">
             <h2>Vue d’ensemble</h2>
@@ -318,7 +317,118 @@ MODELE_HTML = r"""<!DOCTYPE html>
             </div>
         </section>
 
+        <section id="materiel" class="section">
+            <h2>Matériel – Alimentation</h2>
+            <div class="grille2">
+                <div class="bloc">
+                    <div class="etiquette">Températures</div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Capteur</th><th>Température</th><th>État</th></tr></thead>
+                            <tbody>
+                                %%LIGNES_TEMPERATURES%%
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bloc">
+                    <div class="etiquette">Alimentation</div>
+                    <ul>
+                        %%ELEMENTS_ALIM%%
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="memoire" class="section">
+            <h2>Mémoire</h2>
+            <div class="grille3">
+                <div class="bloc">
+                    <span class="etiquette">Totale</span>
+                    <span class="valeur">%%MEM_TOTALE%%</span>
+                </div>
+                <div class="bloc">
+                    <span class="etiquette">Utilisée</span>
+                    <span class="valeur">%%MEM_UTILISEE%% (%%MEM_UTILISEE_PCT%%)</span>
+                </div>
+                <div class="bloc">
+                    <span class="etiquette">Libre + cache</span>
+                    <span class="valeur">%%MEM_LIBRE_CACHE%%</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="disques" class="section">
+            <h2>Disques</h2>
+            <div class="bloc-table">
+                <table>
+                    <thead><tr><th>Périphérique</th><th>Montage</th><th>Utilisation</th><th>Espace libre</th><th>Type</th></tr></thead>
+                    <tbody>
+                        %%LIGNES_DISQUES%%
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="processus" class="section">
+            <h2>Processus actifs</h2>
+            <div class="bloc-table">
+                <table>
+                    <thead><tr><th>PID</th><th>Utilisateur</th><th>CPU %</th><th>RAM %</th><th>Commande</th></tr></thead>
+                    <tbody>
+                        %%LIGNES_PROCESSUS%%
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="reseau" class="section">
+            <h2>Réseau</h2>
+            <div class="grille2">
+                <div class="bloc">
+                    <div class="etiquette">Interfaces</div>
+                    <div class="table-wrap" role="region" aria-label="Interfaces réseau">
+                        <table>
+                            <thead><tr><th>Interface</th><th>IPv4</th><th>IPv6</th><th>RX/TX</th><th>État</th></tr></thead>
+                            <tbody>
+                                %%LIGNES_INTERFACES%%
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bloc">
+                    <div class="etiquette">Connexions</div>
+                    <ul>
+                        %%ELEMENTS_CONNEXIONS%%
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="web" class="section">
+            <h2>Services Web</h2>
+            <div class="bloc-table">
+                <table>
+                    <thead><tr><th>Hôte</th><th>Titre</th><th>Favicon</th><th>Serveur</th><th>Proto/TLS</th><th>Statut</th></tr></thead>
+                    <tbody>
+                        %%LIGNES_WEB%%
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="erreurs" class="section">
+            <h2 id="texte-erreurs">Erreurs</h2>
+            <div class="bloc-erreurs">
+                <ul>
+                    %%ELEMENTS_ERREURS%%
+                </ul>
+            </div>
+        </section>
     </main>
+    <footer>
+        Généré le <span class="valeur">%%DATE_HEURE%%</span>
+    </footer>
 </body>
 </html>"""
 
