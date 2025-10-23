@@ -1,1 +1,116 @@
+import argparse
+import datetime
+import html
 
+def generer_rapport(modele: str, jetons: dict) -> str:
+    sortie = modele
+    for cle, valeur in jetons.items():
+        texte = valeur if cle in CLES_BRUTES else html.escape(str(valeur), quote=True)
+        sortie = sortie.replace("%%" + cle + "%%", texte)
+    return sortie
+
+def lire_fichier(chemin):
+    try:
+        with open(chemin, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read().strip(), None
+    except Exception as e:
+        return None, f"{chemin}: {e}"
+
+def formater_duree(secondes_flottantes):
+    s = int(secondes_flottantes)
+    h, s = divmod(s, 3600)
+    m, s = divmod(s, 60)
+    j, h = divmod(h, 24)
+    if j > 0:
+        return f"{j} jours, {h:02d}:{m:02d}:{s:02d}"
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+def analyser_meminfo():
+    texte, err = lire_fichier("/proc/meminfo")
+    if err:
+        return None, err
+    kv = {}
+    for ligne in texte.splitlines():
+        if ":" in ligne:
+            k, v = ligne.split(":", 1)
+            kv[k.strip()] = v.strip()
+
+    def ko_vers_gio(texte_val, defaut=0.0):
+        try:
+            return float(texte_val.split()[0]) / (1024 * 1024)
+        except Exception:
+            return defaut
+
+    total = ko_vers_gio(kv.get("MemTotal", "0 kB"))
+    libre = ko_vers_gio(kv.get("MemFree", "0 kB"))
+    tampons = ko_vers_gio(kv.get("Buffers", "0 kB"))
+    cache = ko_vers_gio(kv.get("Cached", "0 kB"))
+    reclaimable = ko_vers_gio(kv.get("SReclaimable", "0 kB"))
+    shmem = ko_vers_gio(kv.get("Shmem", "0 kB"))
+
+    libre_cache = libre + tampons + cache + reclaimable - shmem
+    utilisee = max(0.0, total - libre - tampons - cache - reclaimable + shmem)
+    pct = (utilisee / total * 100.0) if total > 0 else 0.0
+
+    return {
+        "MEM_TOTALE": f"{total:.1f} Go",
+        "MEM_UTILISEE": f"{utilisee:.1f} Go",
+        "MEM_UTILISEE_PCT": f"{pct:.1f}%",
+        "MEM_LIBRE_CACHE": f"{libre_cache:.1f} Go",
+    }, None
+
+def collecter_donnees():
+    erreurs = []
+
+    date_heure = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    nom_hote, err = lire_fichier("/proc/sys/kernel/hostname")
+    if err: erreurs.append(err)
+    if not nom_hote: nom_hote = "inconnu"
+
+    noyau, err = lire_fichier("/proc/version")
+    if err: erreurs.append(err)
+    if not noyau: noyau = "n/a"
+
+    txt_uptime, err = lire_fichier("/proc/uptime")
+    if err:
+        erreurs.append(err)
+        duree_fonctionnement = "n/a"
+    else:
+        try:
+            secondes = float(txt_uptime.split()[0])
+            duree_fonctionnement = formater_duree(secondes)
+        except Exception as e:
+            duree_fonctionnement = "n/a"
+            erreurs.append(f"/proc/uptime: {e}")
+
+    mem, err = analyser_meminfo()
+    if err:
+        erreurs.append(err)
+        mem = {
+            "MEM_TOTALE": "n/a",
+            "MEM_UTILISEE": "n/a",
+            "MEM_UTILISEE_PCT": "n/a",
+            "MEM_LIBRE_CACHE": "n/a",
+        }
+
+    jetons = {
+        "NOM_HOTE": nom_hote,
+        "DATE_HEURE": date_heure,
+        "NOYAU": noyau,
+        "DUREE_FONCTIONNEMENT": duree_fonctionnement,
+        "MEM_TOTALE": mem["MEM_TOTALE"],
+        "MEM_UTILISEE": mem["MEM_UTILISEE"],
+        "MEM_UTILISEE_PCT": mem["MEM_UTILISEE_PCT"],
+        "MEM_LIBRE_CACHE": mem["MEM_LIBRE_CACHE"],
+
+        "LIGNES_TEMPERATURES": "<tr><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
+        "ELEMENTS_ALIM": "<li>N/A</li>",
+        "LIGNES_DISQUES": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>",
+        "LIGNES_PROCESSUS": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>",
+        "LIGNES_INTERFACES": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
+        "ELEMENTS_CONNEXIONS": "<li>N/A</li>",
+        "LIGNES_WEB": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
+        "ELEMENTS_ERREURS": "<li>Aucune erreur</li>",
+    }
+    return jetons
