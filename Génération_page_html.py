@@ -442,14 +442,7 @@ CLES_BRUTES = {
     "LIGNES_INTERFACES", "ELEMENTS_CONNEXIONS", "LIGNES_WEB", "ELEMENTS_ERREURS"
 }
 
-# -------------------------
-# Fonctions utilitaires
-# -------------------------
 def generer_rapport(modele: str, jetons: dict) -> str:
-    """Remplace les placeholders %%CLE%% par les valeurs.
-       - Pour les clés 'brutes', on insère le HTML tel quel.
-       - Pour les autres, on échappe le contenu.
-       - On nettoie enfin les placeholders restants."""
     sortie = modele
     for cle, valeur in jetons.items():
         if cle in CLES_BRUTES:
@@ -457,7 +450,6 @@ def generer_rapport(modele: str, jetons: dict) -> str:
         else:
             val = html.escape(str(valeur), quote=True)
         sortie = sortie.replace("%%" + cle + "%%", val)
-    # supprimer placeholders restants (sécurité)
     import re
     sortie = re.sub(r"%%[A-Z0-9_]+%%", "", sortie)
     return sortie
@@ -478,9 +470,6 @@ def formater_duree(secondes_flottantes):
         return f"{j} jours, {h:02d}:{m:02d}:{s:02d}"
     return f"{h:02d}:{m:02d}:{s:02d}"
 
-# -------------------------
-# Collecte Mémoire
-# -------------------------
 def analyser_meminfo():
     txt, err = lire_fichier("/proc/meminfo")
     if err:
@@ -511,9 +500,6 @@ def analyser_meminfo():
         "MEM_LIBRE_CACHE": f"{libre_cache:.1f} Go",
     }, None
 
-# -------------------------
-# Températures
-# -------------------------
 def collecter_temperatures():
     lignes = []
     zones = sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp"))
@@ -531,9 +517,7 @@ def collecter_temperatures():
         lignes.append("<tr><td>—</td><td>N/A</td><td><span class='badge'>N/A</span></td></tr>")
     return "\n".join(lignes)
 
-# -------------------------
-# Alimentation / Batterie (sans os)
-# -------------------------
+
 def collecter_alimentation():
     lignes = []
     bats = sorted(glob.glob("/sys/class/power_supply/BAT*"))
@@ -554,9 +538,6 @@ def collecter_alimentation():
         lignes.append(f"<li>{nom}: {status} — {cap}%</li>")
     return "\n".join(lignes)
 
-# -------------------------
-# Disques (df)
-# -------------------------
 def collecter_disques():
     try:
         r = subprocess.run(["df", "-T", "-hP"], capture_output=True, text=True, timeout=3)
@@ -565,7 +546,6 @@ def collecter_disques():
             parts = line.split()
             if len(parts) >= 7:
                 device, fstype, size, used, avail, pcent, mount = parts[:7]
-                # correspond aux colonnes du template (Périphérique, Montage, Utilisation, Espace libre, Type)
                 lignes.append(f"<tr><td>{device}</td><td>{mount}</td><td>{pcent}</td><td>{avail}</td><td>{fstype}</td></tr>")
         if not lignes:
             return "<tr><td colspan='5'>N/A</td></tr>"
@@ -573,9 +553,6 @@ def collecter_disques():
     except Exception:
         return "<tr><td colspan='5'>N/A</td></tr>"
 
-# -------------------------
-# Processus (top 10 CPU)
-# -------------------------
 def collecter_processus():
     try:
         r = subprocess.run(["ps", "aux", "--sort=-%cpu"], capture_output=True, text=True, timeout=3)
@@ -592,11 +569,8 @@ def collecter_processus():
     except Exception:
         return "<tr><td colspan='5'>N/A</td></tr>"
 
-# -------------------------
-# Interfaces réseau
-# -------------------------
+
 def collecter_interfaces():
-    # récup IP via `ip -j addr`, RX/TX via /proc/net/dev
     ipv4 = {}
     ipv6 = {}
     try:
@@ -643,11 +617,7 @@ def collecter_interfaces():
         return "<tr><td colspan='5'>N/A</td></tr>"
     return "\n".join(lignes)
 
-# -------------------------
-# Connexions et services Web (placeholder simple)
-# -------------------------
 def collecter_connexions():
-    # Retourne une liste d'items HTML (ex: services à l'écoute)
     try:
         r = subprocess.run(["ss", "-tuln"], capture_output=True, text=True, timeout=2)
         lignes = []
@@ -660,7 +630,7 @@ def collecter_connexions():
         return "<li>N/A</li>"
 
 def collecter_services_web():
-    # Placeholder: listage simple des ports 80/443 locaux (on peut enrichir avec urllib)
+
     rows = []
     try:
         r = subprocess.run(["ss", "-ntlp"], capture_output=True, text=True, timeout=2)
@@ -673,9 +643,6 @@ def collecter_services_web():
     except Exception:
         return "<tr><td colspan='6'>N/A</td></tr>"
 
-# -------------------------
-# Collecte globale et composition des jetons
-# -------------------------
 def collecter_donnees():
     erreurs = []
 
@@ -732,11 +699,10 @@ def main():
     parseur = argparse.ArgumentParser(description="Génère un rapport HTML du système (Linux).")
     parseur.add_argument("--sortie", default="/home/senshi/rapport_supkrellm.html",
                          help="Chemin du fichier HTML de sortie")
-    parseur.add_argument("--modele", help="Chemin vers un template HTML externe")  # <-- AJOUT
+    parseur.add_argument("--modele", help="Chemin vers un template HTML externe")
 
     args = parseur.parse_args()
 
-    # <-- AJOUT : charger le template externe si fourni
     if args.modele:
         modele = Path(args.modele).read_text(encoding="utf-8")
     else:
