@@ -1,12 +1,15 @@
-import argparse
 import datetime
 import html
+import subprocess
+import glob
+import os
+
+# Fonctions utilitaires
 
 def generer_rapport(modele: str, jetons: dict) -> str:
     sortie = modele
     for cle, valeur in jetons.items():
-        texte = valeur if cle in CLES_BRUTES else html.escape(str(valeur), quote=True)
-        sortie = sortie.replace("%%" + cle + "%%", texte)
+        sortie = sortie.replace("%%" + cle + "%%", html.escape(str(valeur), quote=True))
     return sortie
 
 def lire_fichier(chemin):
@@ -24,6 +27,8 @@ def formater_duree(secondes_flottantes):
     if j > 0:
         return f"{j} jours, {h:02d}:{m:02d}:{s:02d}"
     return f"{h:02d}:{m:02d}:{s:02d}"
+
+# Mémoire
 
 def analyser_meminfo():
     texte, err = lire_fichier("/proc/meminfo")
@@ -58,6 +63,94 @@ def analyser_meminfo():
         "MEM_UTILISEE_PCT": f"{pct:.1f}%",
         "MEM_LIBRE_CACHE": f"{libre_cache:.1f} Go",
     }, None
+
+# Températures
+
+def collecter_temperatures():
+    lignes = []
+    thermal_zones = glob.glob("/sys/class/thermal/thermal_zone*/temp")
+    for tz in thermal_zones:
+        try:
+            with open(tz, "r") as f:
+                temp_milli = int(f.read().strip())
+                temp_c = temp_milli / 1000
+                nom = tz.split("/")[-2]
+                lignes.append(f"<tr><td>{nom}</td><td>{temp_c:.1f} °C</td></tr>")
+        except:
+            lignes.append(f"<tr><td>{tz}</td><td>N/A</td></tr>")
+    if not lignes:
+        lignes.append("<tr><td>—</td><td>N/A</td></tr>")
+    return "\n".join(lignes)
+
+# Alimentation / Batterie
+
+def collecter_alimentation():
+    lignes = []
+    try:
+        batteries = [d for d in os.listdir("/sys/class/power_supply/") if d.startswith("BAT")]
+        if not batteries:
+            return "<li>Aucune batterie détectée</li>"
+        for bat in batteries:
+            try:
+                with open(f"/sys/class/power_supply/{bat}/status") as f:
+                    status = f.read().strip()
+                with open(f"/sys/class/power_supply/{bat}/capacity") as f:
+                    cap = f.read().strip()
+                lignes.append(f"<li>{bat}: {status}, {cap}%</li>")
+            except:
+                lignes.append(f"<li>{bat}: N/A</li>")
+    except:
+        lignes.append("<li>Impossible de lire l’alimentation</li>")
+    return "\n".join(lignes)
+
+# Disques
+
+def collecter_disques():
+    lignes = []
+    try:
+        result = subprocess.run(["df", "-h", "--output=source,size,used,avail,pcent,target"], capture_output=True, text=True)
+        lines = result.stdout.splitlines()[1:]
+        for line in lines:
+            parts = line.split()
+            if len(parts) == 6:
+                lignes.append(f"<tr><td>{parts[0]}</td><td>{parts[1]}</td><td>{parts[2]}</td><td>{parts[3]}</td><td>{parts[4]}</td><td>{parts[5]}</td></tr>")
+    except:
+        lignes.append("<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>")
+    return "\n".join(lignes)
+
+# Processus (top 10 CPU)
+
+def collecter_processus():
+    lignes = []
+    try:
+        result = subprocess.run(["ps", "aux", "--sort=-%cpu"], capture_output=True, text=True)
+        lines = result.stdout.splitlines()[1:11]
+        for line in lines:
+            parts = line.split(None, 10)
+            if len(parts) >= 11:
+                user, pid, cpu, mem, vsz, rss, tty, stat, start, time, command = parts
+                lignes.append(f"<tr><td>{pid}</td><td>{user}</td><td>{cpu}%</td><td>{mem}%</td><td>{command}</td></tr>")
+    except:
+        lignes.append("<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>")
+    return "\n".join(lignes)
+
+# Interfaces réseau
+
+def collecter_interfaces():
+    lignes = []
+    try:
+        with open("/proc/net/dev") as f:
+            lines = f.readlines()[2:]
+            for line in lines:
+                iface, data = line.split(":", 1)
+                iface = iface.strip()
+                rx_bytes, rx_packets, *_ = data.split()
+                lignes.append(f"<tr><td>{iface}</td><td>{int(rx_bytes)/1024:.1f} KB</td><td>{rx_packets}</td></tr>")
+    except:
+        lignes.append("<tr><td>—</td><td>—</td><td>—</td></tr>")
+    return "\n".join(lignes)
+
+# Collecte globale
 
 def collecter_donnees():
     erreurs = []
@@ -104,13 +197,13 @@ def collecter_donnees():
         "MEM_UTILISEE_PCT": mem["MEM_UTILISEE_PCT"],
         "MEM_LIBRE_CACHE": mem["MEM_LIBRE_CACHE"],
 
-        "LIGNES_TEMPERATURES": "<tr><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
-        "ELEMENTS_ALIM": "<li>N/A</li>",
-        "LIGNES_DISQUES": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>",
-        "LIGNES_PROCESSUS": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>",
-        "LIGNES_INTERFACES": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
-        "ELEMENTS_CONNEXIONS": "<li>N/A</li>",
-        "LIGNES_WEB": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
+        "LIGNES_TEMPERATURES": collecter_temperatures(),
+        "ELEMENTS_ALIM": collecter_alimentation(),
+        "LIGNES_DISQUES": collecter_disques(),
+        "LIGNES_PROCESSUS": collecter_processus(),
+        "LIGNES_INTERFACES": collecter_interfaces(),
+
         "ELEMENTS_ERREURS": "<li>Aucune erreur</li>",
     }
+    
     return jetons
