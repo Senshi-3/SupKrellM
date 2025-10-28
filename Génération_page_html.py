@@ -7,7 +7,6 @@ import subprocess
 from pathlib import Path
 
 MODELE_HTML = r"""
-<!-- VERSION TEMPLATE: XXX-123 -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
