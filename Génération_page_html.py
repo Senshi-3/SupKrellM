@@ -1,12 +1,14 @@
 import argparse
 import datetime
+import glob
 import html
 import json
-import glob
+import re
 import subprocess
 from pathlib import Path
 
-MODELE_HTML = r"""
+
+PAGE_MODELE = r"""
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -437,32 +439,38 @@ MODELE_HTML = r"""
 </body>
 </html>"""
 
-CLES_BRUTES = {
-    "LIGNES_TEMPERATURES", "ELEMENTS_ALIM", "LIGNES_DISQUES", "LIGNES_PROCESSUS",
-    "LIGNES_INTERFACES", "ELEMENTS_CONNEXIONS", "LIGNES_WEB", "ELEMENTS_ERREURS"
+
+JETONS_BRUTS = {
+    "LIGNES_TEMPERATURES",
+    "ELEMENTS_ALIM",
+    "LIGNES_DISQUES",
+    "LIGNES_PROCESSUS",
+    "LIGNES_INTERFACES",
+    "ELEMENTS_CONNEXIONS",
+    "LIGNES_WEB",
+    "ELEMENTS_ERREURS",
 }
 
-def generer_rapport(modele: str, jetons: dict) -> str:
-    sortie = modele
-    for cle, valeur in jetons.items():
-        if cle in CLES_BRUTES:
-            val = str(valeur)
+def faire_rapport(modele: str, jetons: dict) -> str:
+    rendu = modele
+    for cle, val in jetons.items():
+        if cle in JETONS_BRUTS:
+            texte = str(val)
         else:
-            val = html.escape(str(valeur), quote=True)
-        sortie = sortie.replace("%%" + cle + "%%", val)
-    import re
-    sortie = re.sub(r"%%[A-Z0-9_]+%%", "", sortie)
-    return sortie
+            texte = html.escape(str(val), quote=True)
+        rendu = rendu.replace("%%" + cle + "%%", texte)
+    rendu = re.sub(r"%%[A-Z0-9_]+%%", "", rendu)
+    return rendu
 
-def lire_fichier(chemin):
+def lire_fichier(chemin: str):
     try:
         with open(chemin, "r", encoding="utf-8", errors="ignore") as f:
             return f.read().strip(), None
-    except Exception as e:
-        return None, f"{chemin}: {e}"
+    except Exception as err:
+        return None, f"{chemin}: {err}"
 
-def formater_duree(secondes_flottantes):
-    s = int(secondes_flottantes)
+def format_duree(sec_f: float) -> str:
+    s = int(sec_f)
     h, s = divmod(s, 3600)
     m, s = divmod(s, 60)
     j, h = divmod(h, 24)
@@ -470,7 +478,7 @@ def formater_duree(secondes_flottantes):
         return f"{j} jours, {h:02d}:{m:02d}:{s:02d}"
     return f"{h:02d}:{m:02d}:{s:02d}"
 
-def analyser_meminfo():
+def lire_memoire():
     txt, err = lire_fichier("/proc/meminfo")
     if err:
         return None, err
@@ -479,11 +487,13 @@ def analyser_meminfo():
         if ":" in ligne:
             k, v = ligne.split(":", 1)
             kv[k.strip()] = v.strip()
+
     def ko_vers_gio(texte_val, defaut=0.0):
         try:
             return float(texte_val.split()[0]) / (1024 * 1024)
         except Exception:
             return defaut
+
     total = ko_vers_gio(kv.get("MemTotal", "0 kB"))
     libre = ko_vers_gio(kv.get("MemFree", "0 kB"))
     tampons = ko_vers_gio(kv.get("Buffers", "0 kB"))
@@ -491,34 +501,43 @@ def analyser_meminfo():
     reclaim = ko_vers_gio(kv.get("SReclaimable", "0 kB"))
     shmem = ko_vers_gio(kv.get("Shmem", "0 kB"))
     libre_cache = libre + tampons + cache + reclaim - shmem
-    utilisee = max(0.0, total - libre - tampons - cache - reclaim + shmem)
-    pct = (utilisee / total * 100.0) if total > 0 else 0.0
+    utilise = max(0.0, total - libre - tampons - cache - reclaim + shmem)
+    pct = (utilise / total * 100.0) if total > 0 else 0.0
     return {
         "MEM_TOTALE": f"{total:.1f} Go",
-        "MEM_UTILISEE": f"{utilisee:.1f} Go",
+        "MEM_UTILISEE": f"{utilise:.1f} Go",
         "MEM_UTILISEE_PCT": f"{pct:.1f}%",
         "MEM_LIBRE_CACHE": f"{libre_cache:.1f} Go",
     }, None
 
-def collecter_temperatures():
+def prendre_temperatures() -> str:
     lignes = []
     zones = sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp"))
     for tz in zones:
         try:
             with open(tz, "r") as f:
-                raw = f.read().strip()
-            temp_milli = int(raw)
-            temp_c = temp_milli / 1000.0
+                brut = f.read().strip()
+            t_milli = int(brut)
+            t_c = t_milli / 1000.0
             nom = Path(tz).parent.name
-            lignes.append(f"<tr><td>{nom}</td><td>{temp_c:.1f} °C</td><td><span class='badge ok'>OK</span></td></tr>")
+            lignes.append(
+                "<tr><td>"
+                f"{nom}</td><td>{t_c:.1f} °C</td>"
+                "<td><span class='badge ok'>OK</span></td></tr>"
+            )
         except Exception:
-            lignes.append(f"<tr><td>{tz}</td><td>N/A</td><td><span class='badge err'>N/A</span></td></tr>")
+            lignes.append(
+                "<tr><td>"
+                f"{tz}</td><td>N/A</td>"
+                "<td><span class='badge err'>N/A</span></td></tr>"
+            )
     if not lignes:
-        lignes.append("<tr><td>—</td><td>N/A</td><td><span class='badge'>N/A</span></td></tr>")
+        lignes.append(
+            "<tr><td>—</td><td>N/A</td><td><span class='badge'>N/A</span></td></tr>"
+        )
     return "\n".join(lignes)
 
-
-def collecter_alimentation():
+def prendre_alim() -> str:
     lignes = []
     bats = sorted(glob.glob("/sys/class/power_supply/BAT*"))
     if not bats:
@@ -526,63 +545,88 @@ def collecter_alimentation():
     for bat in bats:
         try:
             with open(f"{bat}/status", "r") as f:
-                status = f.read().strip()
+                etat = f.read().strip()
         except Exception:
-            status = "N/A"
+            etat = "N/A"
         try:
             with open(f"{bat}/capacity", "r") as f:
                 cap = f.read().strip()
         except Exception:
             cap = "N/A"
         nom = Path(bat).name
-        lignes.append(f"<li>{nom}: {status} — {cap}%</li>")
+        lignes.append(f"<li>{nom}: {etat} — {cap}%</li>")
     return "\n".join(lignes)
 
-def collecter_disques():
+def prendre_disques() -> str:
     try:
-        r = subprocess.run(["df", "-T", "-hP"], capture_output=True, text=True, timeout=3)
+        res = subprocess.run(
+            ["df", "-T", "-hP"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
         lignes = []
-        for line in r.stdout.splitlines()[1:]:
+        for line in res.stdout.splitlines()[1:]:
             parts = line.split()
             if len(parts) >= 7:
-                device, fstype, size, used, avail, pcent, mount = parts[:7]
-                lignes.append(f"<tr><td>{device}</td><td>{mount}</td><td>{pcent}</td><td>{avail}</td><td>{fstype}</td></tr>")
+                dev, fstype, size, used, free, pcent, mnt = parts[:7]
+                lignes.append(
+                    "<tr>"
+                    f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"
+                    f"<td>{free}</td><td>{fstype}</td>"
+                    "</tr>"
+                )
         if not lignes:
             return "<tr><td colspan='5'>N/A</td></tr>"
         return "\n".join(lignes)
     except Exception:
         return "<tr><td colspan='5'>N/A</td></tr>"
 
-def collecter_processus():
+def prendre_processus() -> str:
     try:
-        r = subprocess.run(["ps", "aux", "--sort=-%cpu"], capture_output=True, text=True, timeout=3)
+        res = subprocess.run(
+            ["ps", "aux", "--sort=-%cpu"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
         lignes = []
-        for line in r.stdout.splitlines()[1:11]:
+        for line in res.stdout.splitlines()[1:11]:
             parts = line.split(None, 10)
             if len(parts) >= 11:
-                user, pid, cpu, mem, vsz, rss, tty, stat, start, timeu, command = parts
-                cmd_safe = html.escape(command)[:120]
-                lignes.append(f"<tr><td>{pid}</td><td>{user}</td><td>{cpu}%</td><td>{mem}%</td><td>{cmd_safe}</td></tr>")
+                user, pid, cpu, mem, vsz, rss, tty, stat, start, t, cmd = parts
+                cmd_ok = html.escape(cmd)[:120]
+                lignes.append(
+                    "<tr>"
+                    f"<td>{pid}</td><td>{user}</td>"
+                    f"<td>{cpu}%</td><td>{mem}%</td>"
+                    f"<td>{cmd_ok}</td>"
+                    "</tr>"
+                )
         if not lignes:
             return "<tr><td colspan='5'>N/A</td></tr>"
         return "\n".join(lignes)
     except Exception:
         return "<tr><td colspan='5'>N/A</td></tr>"
 
-
-def collecter_interfaces():
-    ipv4 = {}
-    ipv6 = {}
+def prendre_interfaces() -> str:
+    ip4 = {}
+    ip6 = {}
     try:
-        r = subprocess.run(["ip", "-j", "addr"], capture_output=True, text=True, timeout=2)
-        for ifc in json.loads(r.stdout):
-            name = ifc.get("ifname")
-            for addr in ifc.get("addr_info", []):
-                fam = addr.get("family")
+        res = subprocess.run(
+            ["ip", "-j", "addr"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        for ifc in json.loads(res.stdout):
+            nom = ifc.get("ifname")
+            for adr in ifc.get("addr_info", []):
+                fam = adr.get("family")
                 if fam == "inet":
-                    ipv4.setdefault(name, []).append(addr.get("local"))
+                    ip4.setdefault(nom, []).append(adr.get("local"))
                 elif fam == "inet6":
-                    ipv6.setdefault(name, []).append(addr.get("local"))
+                    ip6.setdefault(nom, []).append(adr.get("local"))
     except Exception:
         pass
 
@@ -593,35 +637,48 @@ def collecter_interfaces():
                 if ":" not in line:
                     continue
                 iface, rest = line.split(":", 1)
-                name = iface.strip()
+                nom = iface.strip()
                 nums = rest.split()
                 rx = int(nums[0]) if nums else 0
                 tx = int(nums[8]) if len(nums) > 8 else 0
-                rxtx[name] = (rx, tx)
+                rxtx[nom] = (rx, tx)
     except Exception:
         pass
 
     lignes = []
-    noms = sorted(set(list(rxtx.keys()) + list(ipv4.keys()) + list(ipv6.keys())))
-    for n in noms:
-        ip4 = ", ".join(ipv4.get(n, [])) or "—"
-        ip6 = ", ".join(ipv6.get(n, [])) or "—"
-        rx, tx = rxtx.get(n, (0, 0))
+    noms = sorted(set(list(rxtx.keys()) + list(ip4.keys()) + list(ip6.keys())))
+    for nom in noms:
+        ip_v4 = ", ".join(ip4.get(nom, [])) or "—"
+        ip_v6 = ", ".join(ip6.get(nom, [])) or "—"
+        rx, tx = rxtx.get(nom, (0, 0))
         try:
-            with open(f"/sys/class/net/{n}/operstate", "r") as f:
+            with open(f"/sys/class/net/{nom}/operstate", "r") as f:
                 etat = f.read().strip()
         except Exception:
             etat = "N/A"
-        lignes.append(f"<tr><td>{n}</td><td>{ip4}</td><td>{ip6}</td><td>{rx//1024}K / {tx//1024}K</td><td><span class='badge'>{etat}</span></td></tr>")
+        lignes.append(
+            "<tr>"
+            f"<td>{nom}</td>"
+            f"<td>{ip_v4}</td>"
+            f"<td>{ip_v6}</td>"
+            f"<td>{rx//1024}K / {tx//1024}K</td>"
+            f"<td><span class='badge'>{etat}</span></td>"
+            "</tr>"
+        )
     if not lignes:
         return "<tr><td colspan='5'>N/A</td></tr>"
     return "\n".join(lignes)
 
-def collecter_connexions():
+def prendre_connexions() -> str:
     try:
-        r = subprocess.run(["ss", "-tuln"], capture_output=True, text=True, timeout=2)
+        res = subprocess.run(
+            ["ss", "-tuln"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
         lignes = []
-        for line in r.stdout.splitlines()[1:]:
+        for line in res.stdout.splitlines()[1:]:
             lignes.append(f"<li>{html.escape(line)}</li>")
         if not lignes:
             return "<li>Aucune connexion</li>"
@@ -629,90 +686,116 @@ def collecter_connexions():
     except Exception:
         return "<li>N/A</li>"
 
-def collecter_services_web():
-
-    rows = []
+def prendre_web() -> str:
+    lignes = []
     try:
-        r = subprocess.run(["ss", "-ntlp"], capture_output=True, text=True, timeout=2)
-        for ligne in r.stdout.splitlines():
+        res = subprocess.run(
+            ["ss", "-ntlp"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        for ligne in res.stdout.splitlines():
             if ":80 " in ligne or ":443 " in ligne:
-                rows.append(f"<tr><td>{html.escape(ligne)}</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge ok'>OK</span></td></tr>")
-        if not rows:
+                lignes.append(
+                    "<tr>"
+                    f"<td>{html.escape(ligne)}</td>"
+                    "<td>—</td><td>—</td><td>—</td><td>—</td>"
+                    "<td><span class='badge ok'>OK</span></td>"
+                    "</tr>"
+                )
+        if not lignes:
             return "<tr><td colspan='6'>Aucun service web détecté</td></tr>"
-        return "\n".join(rows)
+        return "\n".join(lignes)
     except Exception:
         return "<tr><td colspan='6'>N/A</td></tr>"
 
-def collecter_donnees():
+def prendre_tout():
     erreurs = []
-
     date_heure = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     nom_hote, err = lire_fichier("/proc/sys/kernel/hostname")
-    if err: erreurs.append(err)
-    if not nom_hote: nom_hote = "inconnu"
+    if err:
+        erreurs.append(err)
+    if not nom_hote:
+        nom_hote = "inconnu"
 
     noyau, err = lire_fichier("/proc/version")
-    if err: erreurs.append(err)
-    if not noyau: noyau = "n/a"
+    if err:
+        erreurs.append(err)
+    if not noyau:
+        noyau = "n/a"
 
     txt_uptime, err = lire_fichier("/proc/uptime")
     if err:
         erreurs.append(err)
-        duree_fonctionnement = "n/a"
+        duree = "n/a"
     else:
         try:
-            secondes = float(txt_uptime.split()[0])
-            duree_fonctionnement = formater_duree(secondes)
+            secs = float(txt_uptime.split()[0])
+            duree = format_duree(secs)
         except Exception as e:
-            duree_fonctionnement = "n/a"
+            duree = "n/a"
             erreurs.append(f"/proc/uptime: {e}")
 
-    mem, err = analyser_meminfo()
+    mem, err = lire_memoire()
     if err:
         erreurs.append(err)
-        mem = {"MEM_TOTALE":"n/a","MEM_UTILISEE":"n/a","MEM_UTILISEE_PCT":"n/a","MEM_LIBRE_CACHE":"n/a"}
+        mem = {
+            "MEM_TOTALE": "n/a",
+            "MEM_UTILISEE": "n/a",
+            "MEM_UTILISEE_PCT": "n/a",
+            "MEM_LIBRE_CACHE": "n/a",
+        }
 
     jetons = {
         "NOM_HOTE": nom_hote,
         "DATE_HEURE": date_heure,
         "NOYAU": noyau,
-        "DUREE_FONCTIONNEMENT": duree_fonctionnement,
+        "DUREE_FONCTIONNEMENT": duree,
         "MEM_TOTALE": mem["MEM_TOTALE"],
         "MEM_UTILISEE": mem["MEM_UTILISEE"],
         "MEM_UTILISEE_PCT": mem["MEM_UTILISEE_PCT"],
         "MEM_LIBRE_CACHE": mem["MEM_LIBRE_CACHE"],
-
-        "LIGNES_TEMPERATURES": collecter_temperatures(),
-        "ELEMENTS_ALIM": collecter_alimentation(),
-        "LIGNES_DISQUES": collecter_disques(),
-        "LIGNES_PROCESSUS": collecter_processus(),
-        "LIGNES_INTERFACES": collecter_interfaces(),
-        "ELEMENTS_CONNEXIONS": collecter_connexions(),
-        "LIGNES_WEB": collecter_services_web(),
-
-        "ELEMENTS_ERREURS": "\n".join(f"<li>{html.escape(e)}</li>" for e in erreurs) if erreurs else "<li>Aucune erreur</li>",
+        "LIGNES_TEMPERATURES": prendre_temperatures(),
+        "ELEMENTS_ALIM": prendre_alim(),
+        "LIGNES_DISQUES": prendre_disques(),
+        "LIGNES_PROCESSUS": prendre_processus(),
+        "LIGNES_INTERFACES": prendre_interfaces(),
+        "ELEMENTS_CONNEXIONS": prendre_connexions(),
+        "LIGNES_WEB": prendre_web(),
+        "ELEMENTS_ERREURS": (
+            "\n".join(f"<li>{html.escape(e)}</li>" for e in erreurs)
+            if erreurs
+            else "<li>Aucune erreur</li>"
+        ),
     }
     return jetons
 
 def main():
-    parseur = argparse.ArgumentParser(description="Génère un rapport HTML du système (Linux).")
-    parseur.add_argument("--sortie", default="/home/senshi/rapport_supkrellm.html",
-                         help="Chemin du fichier HTML de sortie")
-    parseur.add_argument("--modele", help="Chemin vers un template HTML externe")
-
+    parseur = argparse.ArgumentParser(
+        description="Génère un rapport HTML du système (Linux)."
+    )
+    parseur.add_argument(
+        "--sortie",
+        default=str(Path.home() / "rapport_systeme.html"),
+        help="Chemin du fichier HTML de sortie",
+    )
+    parseur.add_argument(
+        "--modele",
+        help="Chemin vers un template HTML externe",
+    )
     args = parseur.parse_args()
 
     if args.modele:
         modele = Path(args.modele).read_text(encoding="utf-8")
     else:
-        modele = MODELE_HTML
+        modele = PAGE_MODELE
 
-    jetons = collecter_donnees()
-    html_final = generer_rapport(modele, jetons)
-
-    Path(args.sortie).write_text(html_final, encoding="utf-8")
-    print("Rapport HTML :", args.sortie)
+    jetons = prendre_tout()
+    rendu = faire_rapport(modele, jetons)
+    Path(args.sortie).write_text(rendu, encoding="utf-8")
+    print(f"Rapport HTML -> {args.sortie}")
 
 if __name__ == "__main__":
     main()
