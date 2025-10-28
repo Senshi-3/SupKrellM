@@ -1,8 +1,14 @@
 import argparse
 import datetime
 import html
+import json
+import glob
+import subprocess
+from pathlib import Path
 
-MODELE_HTML = r"""<!DOCTYPE html>
+MODELE_HTML = r"""
+<!-- VERSION TEMPLATE: XXX-123 -->
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="utf-8">
@@ -437,11 +443,24 @@ CLES_BRUTES = {
     "LIGNES_INTERFACES", "ELEMENTS_CONNEXIONS", "LIGNES_WEB", "ELEMENTS_ERREURS"
 }
 
+# -------------------------
+# Fonctions utilitaires
+# -------------------------
 def generer_rapport(modele: str, jetons: dict) -> str:
+    """Remplace les placeholders %%CLE%% par les valeurs.
+       - Pour les clés 'brutes', on insère le HTML tel quel.
+       - Pour les autres, on échappe le contenu.
+       - On nettoie enfin les placeholders restants."""
     sortie = modele
     for cle, valeur in jetons.items():
-        texte = valeur if cle in CLES_BRUTES else html.escape(str(valeur), quote=True)
-        sortie = sortie.replace("%%" + cle + "%%", texte)
+        if cle in CLES_BRUTES:
+            val = str(valeur)
+        else:
+            val = html.escape(str(valeur), quote=True)
+        sortie = sortie.replace("%%" + cle + "%%", val)
+    # supprimer placeholders restants (sécurité)
+    import re
+    sortie = re.sub(r"%%[A-Z0-9_]+%%", "", sortie)
     return sortie
 
 def lire_fichier(chemin):
@@ -460,33 +479,32 @@ def formater_duree(secondes_flottantes):
         return f"{j} jours, {h:02d}:{m:02d}:{s:02d}"
     return f"{h:02d}:{m:02d}:{s:02d}"
 
+# -------------------------
+# Collecte Mémoire
+# -------------------------
 def analyser_meminfo():
-    texte, err = lire_fichier("/proc/meminfo")
+    txt, err = lire_fichier("/proc/meminfo")
     if err:
         return None, err
     kv = {}
-    for ligne in texte.splitlines():
+    for ligne in txt.splitlines():
         if ":" in ligne:
             k, v = ligne.split(":", 1)
             kv[k.strip()] = v.strip()
-
     def ko_vers_gio(texte_val, defaut=0.0):
         try:
             return float(texte_val.split()[0]) / (1024 * 1024)
         except Exception:
             return defaut
-
     total = ko_vers_gio(kv.get("MemTotal", "0 kB"))
     libre = ko_vers_gio(kv.get("MemFree", "0 kB"))
     tampons = ko_vers_gio(kv.get("Buffers", "0 kB"))
     cache = ko_vers_gio(kv.get("Cached", "0 kB"))
-    reclaimable = ko_vers_gio(kv.get("SReclaimable", "0 kB"))
+    reclaim = ko_vers_gio(kv.get("SReclaimable", "0 kB"))
     shmem = ko_vers_gio(kv.get("Shmem", "0 kB"))
-
-    libre_cache = libre + tampons + cache + reclaimable - shmem
-    utilisee = max(0.0, total - libre - tampons - cache - reclaimable + shmem)
+    libre_cache = libre + tampons + cache + reclaim - shmem
+    utilisee = max(0.0, total - libre - tampons - cache - reclaim + shmem)
     pct = (utilisee / total * 100.0) if total > 0 else 0.0
-
     return {
         "MEM_TOTALE": f"{total:.1f} Go",
         "MEM_UTILISEE": f"{utilisee:.1f} Go",
@@ -494,6 +512,171 @@ def analyser_meminfo():
         "MEM_LIBRE_CACHE": f"{libre_cache:.1f} Go",
     }, None
 
+# -------------------------
+# Températures
+# -------------------------
+def collecter_temperatures():
+    lignes = []
+    zones = sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp"))
+    for tz in zones:
+        try:
+            with open(tz, "r") as f:
+                raw = f.read().strip()
+            temp_milli = int(raw)
+            temp_c = temp_milli / 1000.0
+            nom = Path(tz).parent.name
+            lignes.append(f"<tr><td>{nom}</td><td>{temp_c:.1f} °C</td><td><span class='badge ok'>OK</span></td></tr>")
+        except Exception:
+            lignes.append(f"<tr><td>{tz}</td><td>N/A</td><td><span class='badge err'>N/A</span></td></tr>")
+    if not lignes:
+        lignes.append("<tr><td>—</td><td>N/A</td><td><span class='badge'>N/A</span></td></tr>")
+    return "\n".join(lignes)
+
+# -------------------------
+# Alimentation / Batterie (sans os)
+# -------------------------
+def collecter_alimentation():
+    lignes = []
+    bats = sorted(glob.glob("/sys/class/power_supply/BAT*"))
+    if not bats:
+        return "<li>Aucune batterie détectée</li>"
+    for bat in bats:
+        try:
+            with open(f"{bat}/status", "r") as f:
+                status = f.read().strip()
+        except Exception:
+            status = "N/A"
+        try:
+            with open(f"{bat}/capacity", "r") as f:
+                cap = f.read().strip()
+        except Exception:
+            cap = "N/A"
+        nom = Path(bat).name
+        lignes.append(f"<li>{nom}: {status} — {cap}%</li>")
+    return "\n".join(lignes)
+
+# -------------------------
+# Disques (df)
+# -------------------------
+def collecter_disques():
+    try:
+        r = subprocess.run(["df", "-T", "-hP"], capture_output=True, text=True, timeout=3)
+        lignes = []
+        for line in r.stdout.splitlines()[1:]:
+            parts = line.split()
+            if len(parts) >= 7:
+                device, fstype, size, used, avail, pcent, mount = parts[:7]
+                # correspond aux colonnes du template (Périphérique, Montage, Utilisation, Espace libre, Type)
+                lignes.append(f"<tr><td>{device}</td><td>{mount}</td><td>{pcent}</td><td>{avail}</td><td>{fstype}</td></tr>")
+        if not lignes:
+            return "<tr><td colspan='5'>N/A</td></tr>"
+        return "\n".join(lignes)
+    except Exception:
+        return "<tr><td colspan='5'>N/A</td></tr>"
+
+# -------------------------
+# Processus (top 10 CPU)
+# -------------------------
+def collecter_processus():
+    try:
+        r = subprocess.run(["ps", "aux", "--sort=-%cpu"], capture_output=True, text=True, timeout=3)
+        lignes = []
+        for line in r.stdout.splitlines()[1:11]:
+            parts = line.split(None, 10)
+            if len(parts) >= 11:
+                user, pid, cpu, mem, vsz, rss, tty, stat, start, timeu, command = parts
+                cmd_safe = html.escape(command)[:120]
+                lignes.append(f"<tr><td>{pid}</td><td>{user}</td><td>{cpu}%</td><td>{mem}%</td><td>{cmd_safe}</td></tr>")
+        if not lignes:
+            return "<tr><td colspan='5'>N/A</td></tr>"
+        return "\n".join(lignes)
+    except Exception:
+        return "<tr><td colspan='5'>N/A</td></tr>"
+
+# -------------------------
+# Interfaces réseau
+# -------------------------
+def collecter_interfaces():
+    # récup IP via `ip -j addr`, RX/TX via /proc/net/dev
+    ipv4 = {}
+    ipv6 = {}
+    try:
+        r = subprocess.run(["ip", "-j", "addr"], capture_output=True, text=True, timeout=2)
+        for ifc in json.loads(r.stdout):
+            name = ifc.get("ifname")
+            for addr in ifc.get("addr_info", []):
+                fam = addr.get("family")
+                if fam == "inet":
+                    ipv4.setdefault(name, []).append(addr.get("local"))
+                elif fam == "inet6":
+                    ipv6.setdefault(name, []).append(addr.get("local"))
+    except Exception:
+        pass
+
+    rxtx = {}
+    try:
+        with open("/proc/net/dev", "r") as f:
+            for line in f.readlines()[2:]:
+                if ":" not in line:
+                    continue
+                iface, rest = line.split(":", 1)
+                name = iface.strip()
+                nums = rest.split()
+                rx = int(nums[0]) if nums else 0
+                tx = int(nums[8]) if len(nums) > 8 else 0
+                rxtx[name] = (rx, tx)
+    except Exception:
+        pass
+
+    lignes = []
+    noms = sorted(set(list(rxtx.keys()) + list(ipv4.keys()) + list(ipv6.keys())))
+    for n in noms:
+        ip4 = ", ".join(ipv4.get(n, [])) or "—"
+        ip6 = ", ".join(ipv6.get(n, [])) or "—"
+        rx, tx = rxtx.get(n, (0, 0))
+        try:
+            with open(f"/sys/class/net/{n}/operstate", "r") as f:
+                etat = f.read().strip()
+        except Exception:
+            etat = "N/A"
+        lignes.append(f"<tr><td>{n}</td><td>{ip4}</td><td>{ip6}</td><td>{rx//1024}K / {tx//1024}K</td><td><span class='badge'>{etat}</span></td></tr>")
+    if not lignes:
+        return "<tr><td colspan='5'>N/A</td></tr>"
+    return "\n".join(lignes)
+
+# -------------------------
+# Connexions et services Web (placeholder simple)
+# -------------------------
+def collecter_connexions():
+    # Retourne une liste d'items HTML (ex: services à l'écoute)
+    try:
+        r = subprocess.run(["ss", "-tuln"], capture_output=True, text=True, timeout=2)
+        lignes = []
+        for line in r.stdout.splitlines()[1:]:
+            lignes.append(f"<li>{html.escape(line)}</li>")
+        if not lignes:
+            return "<li>Aucune connexion</li>"
+        return "\n".join(lignes)
+    except Exception:
+        return "<li>N/A</li>"
+
+def collecter_services_web():
+    # Placeholder: listage simple des ports 80/443 locaux (on peut enrichir avec urllib)
+    rows = []
+    try:
+        r = subprocess.run(["ss", "-ntlp"], capture_output=True, text=True, timeout=2)
+        for ligne in r.stdout.splitlines():
+            if ":80 " in ligne or ":443 " in ligne:
+                rows.append(f"<tr><td>{html.escape(ligne)}</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge ok'>OK</span></td></tr>")
+        if not rows:
+            return "<tr><td colspan='6'>Aucun service web détecté</td></tr>"
+        return "\n".join(rows)
+    except Exception:
+        return "<tr><td colspan='6'>N/A</td></tr>"
+
+# -------------------------
+# Collecte globale et composition des jetons
+# -------------------------
 def collecter_donnees():
     erreurs = []
 
@@ -522,12 +705,7 @@ def collecter_donnees():
     mem, err = analyser_meminfo()
     if err:
         erreurs.append(err)
-        mem = {
-            "MEM_TOTALE": "n/a",
-            "MEM_UTILISEE": "n/a",
-            "MEM_UTILISEE_PCT": "n/a",
-            "MEM_LIBRE_CACHE": "n/a",
-        }
+        mem = {"MEM_TOTALE":"n/a","MEM_UTILISEE":"n/a","MEM_UTILISEE_PCT":"n/a","MEM_LIBRE_CACHE":"n/a"}
 
     jetons = {
         "NOM_HOTE": nom_hote,
@@ -539,28 +717,36 @@ def collecter_donnees():
         "MEM_UTILISEE_PCT": mem["MEM_UTILISEE_PCT"],
         "MEM_LIBRE_CACHE": mem["MEM_LIBRE_CACHE"],
 
-        "LIGNES_TEMPERATURES": "<tr><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
-        "ELEMENTS_ALIM": "<li>N/A</li>",
-        "LIGNES_DISQUES": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>",
-        "LIGNES_PROCESSUS": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>",
-        "LIGNES_INTERFACES": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
-        "ELEMENTS_CONNEXIONS": "<li>N/A</li>",
-        "LIGNES_WEB": "<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class='badge'>N/A</span></td></tr>",
-        "ELEMENTS_ERREURS": "".join(f"<li>{html.escape(e)}</li>" for e in erreurs) if erreurs else "<li>Aucune erreur</li>",
+        "LIGNES_TEMPERATURES": collecter_temperatures(),
+        "ELEMENTS_ALIM": collecter_alimentation(),
+        "LIGNES_DISQUES": collecter_disques(),
+        "LIGNES_PROCESSUS": collecter_processus(),
+        "LIGNES_INTERFACES": collecter_interfaces(),
+        "ELEMENTS_CONNEXIONS": collecter_connexions(),
+        "LIGNES_WEB": collecter_services_web(),
+
+        "ELEMENTS_ERREURS": "\n".join(f"<li>{html.escape(e)}</li>" for e in erreurs) if erreurs else "<li>Aucune erreur</li>",
     }
     return jetons
 
 def main():
     parseur = argparse.ArgumentParser(description="Génère un rapport HTML du système (Linux).")
-    parseur.add_argument("--sortie", default="/home/senshi/rapport_supkrellm.html", help="Chemin du fichier HTML de sortie")
+    parseur.add_argument("--sortie", default="/home/senshi/rapport_supkrellm.html",
+                         help="Chemin du fichier HTML de sortie")
+    parseur.add_argument("--modele", help="Chemin vers un template HTML externe")  # <-- AJOUT
+
     args = parseur.parse_args()
 
+    # <-- AJOUT : charger le template externe si fourni
+    if args.modele:
+        modele = Path(args.modele).read_text(encoding="utf-8")
+    else:
+        modele = MODELE_HTML
+
     jetons = collecter_donnees()
-    html_final = generer_rapport(MODELE_HTML, jetons)
+    html_final = generer_rapport(modele, jetons)
 
-    with open(args.sortie, "w", encoding="utf-8") as f:
-        f.write(html_final)
-
+    Path(args.sortie).write_text(html_final, encoding="utf-8")
     print("Rapport HTML :", args.sortie)
 
 if __name__ == "__main__":
