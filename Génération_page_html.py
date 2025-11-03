@@ -1,3 +1,5 @@
+"""todo: rechargement toutes les 2sec, plus placeholder donc mettre en erreurs"""
+
 """Dernière modif du code, (Noa) /en entier/"""
 
 import argparse
