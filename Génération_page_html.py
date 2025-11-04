@@ -9,6 +9,7 @@ import html
 import json
 import re
 import subprocess
+import time  
 from pathlib import Path
 
 
@@ -92,7 +93,7 @@ PAGE_MODELE = r"""
         .texte-navigateur:nth-child(8) { animation-delay: 2.8s; color: var(--err); }
 
         main {
-            max-width: 55vw;
+            max-width: 100vw;
             margin: 0 auto;
             padding: 0;
         }
@@ -299,16 +300,205 @@ PAGE_MODELE = r"""
     <header>
         <h1 id="texte-titre">Rapport système – <span>%%NOM_HOTE%%</span></h1>
         <nav id="navigateur">
-            <a href="#apercu" class="texte-navigateur">Vue d’ensemble</a>
-            <a href="#materiel" class="texte-navigateur">Matériel</a>
-            <a href="#memoire" class="texte-navigateur">Mémoire</a>
-            <a href="#disques" class="texte-navigateur">Disques</a>
-            <a href="#processus" class="texte-navigateur">Processus</a>
-            <a href="#reseau" class="texte-navigateur">Réseau</a>
-            <a href="#web" class="texte-navigateur">Services web</a>
-            <a href="#erreurs" class="texte-navigateur">Erreurs</a>
+             <a href="donnees_systeme.html#apercu"   target="zone-donnees" class="texte-navigateur">Vue d’ensemble</a>
+            <a href="donnees_systeme.html#materiel" target="zone-donnees" class="texte-navigateur">Matériel</a>
+            <a href="donnees_systeme.html#memoire"  target="zone-donnees" class="texte-navigateur">Mémoire</a>
+            <a href="donnees_systeme.html#disques"  target="zone-donnees" class="texte-navigateur">Disques</a>
+            <a href="donnees_systeme.html#processus" target="zone-donnees" class="texte-navigateur">Processus</a>
+            <a href="donnees_systeme.html#reseau"   target="zone-donnees" class="texte-navigateur">Réseau</a>
+            <a href="donnees_systeme.html#web"      target="zone-donnees" class="texte-navigateur">Services web</a>
+            <a href="donnees_systeme.html#erreurs"  target="zone-donnees" class="texte-navigateur">Erreurs</a>
         </nav>
     </header>
+    <main>
+        <iframe src="donnees_systeme.html" name="zone-donnees" style="width:100%; height:100vh; border:none; scroll-margin-top: 7vw;"></iframe>
+    </main>
+    <footer>
+        Généré le <span class="valeur">%%DATE_HEURE%%</span>
+    </footer>
+</body>
+</html>"""
+
+PAGE_DONNEES = r"""
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="2">
+    <title>Données système</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" href="https://friconix.com/png/fi-cnsuxx-linux.png">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap">
+    <style>
+        :root {
+            --ok: #1f9d55;
+            --warn: #c07f00;
+            --err: #d64545;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: rgb(11, 16, 32);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif;
+            scroll-behavior: smooth; 
+        }
+
+        main {
+            max-width: 55vw;
+            margin: 0 auto;
+            padding: 1vw 0;
+        }
+
+        h2 {
+            display: inline-block;
+            color: #287da1;
+        }
+
+        .section {
+            scroll-margin-top: 7vw;
+        }
+
+        .bloc {
+            background-color: rgba(24, 35, 58, 0.733);
+            padding: 1vw;
+            border-radius: 1em;
+            border: 1px solid #5e7d8aab;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bloc-table {
+            background-color: rgba(24, 35, 58, 0);
+            padding-bottom: 1vw;
+            border-radius: 1em;
+            border: 1px solid #5e7d8aab;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bloc-erreurs {
+            border-left: 3px solid var(--err);
+            padding: 1vw;
+            border-radius: 1em;
+            background: rgba(214, 69, 69, .08);
+            margin-bottom: 1vw;
+        }
+
+        .etiquette {
+            color: #91c2d89a;
+            font-family: var(--mono);
+            padding-bottom: 1vw;
+            user-select: none;
+        }
+
+        .valeur {
+            color: #c9d1ff;
+            font-family: var(--mono);
+        }
+
+        .grille3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            border-radius: 1em;
+        }
+
+        .grille2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            border-radius: 1em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1vw;
+            border-bottom: 1px solid #1c2347;
+            text-align: left;
+            color: #c9d1ff;
+        }
+
+        th {
+            color: #c9d1ff;
+        }
+
+        li {
+            color: #c9d1ff;
+        }
+
+        ul, ol {
+            margin-left: 1vw;
+            padding-left: 1.2rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 3em;
+            font-size: 0.6vw;
+            text-align: center;
+            border: 1px solid #2a366b;
+            background: #0e1430;
+            color: #a8b0d9;
+        }
+
+        .ok {
+            color: #d6ffe6;
+            border-color: rgba(31,157,85,.45);
+            background: rgba(31,157,85,.08);
+        }
+
+        .warn {
+            color: #fff4d6;
+            border-color: rgba(192,127,0,.45);
+            background: rgba(192,127,0,.08);
+        }
+
+        .err {
+            color: #ffe1e1;
+            border-color: rgba(214,69,69,.45);
+            background: rgba(214,69,69,.08);
+        }
+        section:target {
+            animation: mis-en-evidence 0.3s ease-out;
+        }
+
+        section:target .grille3,
+        section:target .grille2,
+        section:target .bloc-table {
+            animation: bordure-evidence 1s linear;
+        }
+
+        section:target .bloc-erreurs {
+            animation: bordure-evidence-err 1s linear;
+        }
+        @keyframes mis-en-evidence {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes bordure-evidence {
+            0% { outline: 2px solid #5e7d8aab; outline-offset: 0.3vw; }
+            90% { outline: 1px solid #5e7d8aab; outline-offset: 0.3vw; }
+            100% { outline: 0; outline-offset: 0; }
+        }
+
+        @keyframes bordure-evidence-err {
+            0% { outline: 2px solid var(--err); outline-offset: 0.3vw; }
+            90% { outline: 1px solid var(--err); outline-offset: 0.3vw; }
+            100% { outline: 0; outline-offset: 0; }
+        }
+    </style>
+</head>
+<body>
     <main>
         <section id="apercu" class="section">
             <h2>Vue d’ensemble</h2>
@@ -437,11 +627,10 @@ PAGE_MODELE = r"""
             </div>
         </section>
     </main>
-    <footer>
-        Généré le <span class="valeur">%%DATE_HEURE%%</span>
-    </footer>
 </body>
-</html>"""
+</html>
+"""
+
 
 
 JETONS_BRUTS = {
@@ -778,28 +967,49 @@ def prendre_tout():
 
 def main():
     parseur = argparse.ArgumentParser(
-        description="Génère un rapport HTML du système (Linux)."
+        description="Génère un rapport HTML du système (Linux).",
     )
     parseur.add_argument(
+        "--page",
         "--sortie",
-        default=str(Path.home() / "rapport_systeme.html"),
-        help="Chemin du fichier HTML de sortie",
+        dest="page",
+        default="rapport_supkrellm.html",
+        help="Chemin de la page principale (statique)",
     )
     parseur.add_argument(
-        "--modele",
-        help="Chemin vers un template HTML externe",
+        "--donnees",
+        default="donnees_systeme.html",
+        help="Chemin de la page de données (dans l'iframe)",
+    )
+    parseur.add_argument(
+        "--intervalle",
+        type=float,
+        default=2.0,
+        help="Intervalle de mise à jour des données (secondes)",
     )
     args = parseur.parse_args()
 
-    if args.modele:
-        modele = Path(args.modele).read_text(encoding="utf-8")
-    else:
-        modele = PAGE_MODELE
+    modele_page = PAGE_MODELE
+    modele_donnees = PAGE_DONNEES
 
-    jetons = prendre_tout()
-    rendu = faire_rapport(modele, jetons)
-    Path(args.sortie).write_text(rendu, encoding="utf-8")
-    print(f"Rapport HTML -> {args.sortie}")
+    jetons_init = prendre_tout()
+    rendu_page = faire_rapport(modele_page, jetons_init)
+    Path(args.page).write_text(rendu_page, encoding="utf-8")
+    print(f"Page principale -> {Path(args.page).resolve()}")
+
+    try:
+        while True:
+            jetons = prendre_tout()
+            rendu_donnees = faire_rapport(modele_donnees, jetons)
+
+            donnees_path = Path(args.donnees)
+            tmp_path = donnees_path.with_suffix(donnees_path.suffix + ".tmp")
+            tmp_path.write_text(rendu_donnees, encoding="utf-8")
+            tmp_path.replace(donnees_path)
+
+            time.sleep(args.intervalle)
+    except KeyboardInterrupt:
+        print("Arrêt demandé par l'utilisateur.")
 
 if __name__ == "__main__":
     main()
