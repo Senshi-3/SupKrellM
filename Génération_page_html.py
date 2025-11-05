@@ -1,6 +1,6 @@
 """todo: plus placeholder donc mettre en erreurs"""
 
-"""Dernière modif du code, (Noa) /rechargement toutes les 2sec/"""
+"""Dernière modif du code, (Noa) /Moins de placeholder, couleur rouge sur les erreurs, recharegment toute les 2sec/"""
 
 import argparse
 import datetime
@@ -631,8 +631,6 @@ PAGE_DONNEES = r"""
 </html>
 """
 
-
-
 JETONS_BRUTS = {
     "LIGNES_TEMPERATURES",
     "ELEMENTS_ALIM",
@@ -713,28 +711,18 @@ def prendre_temperatures() -> str:
             t_milli = int(brut)
             t_c = t_milli / 1000.0
             nom = Path(tz).parent.name
-            lignes.append(
-                "<tr><td>"
-                f"{nom}</td><td>{t_c:.1f} °C</td>"
-                "<td><span class='badge ok'>OK</span></td></tr>"
-            )
+            lignes.append("<tr><td>"f"{nom}</td><td>{t_c:.1f} °C</td>""<td><span class='badge ok'>OK</span></td></tr>")
         except Exception:
-            lignes.append(
-                "<tr><td>"
-                f"{tz}</td><td>N/A</td>"
-                "<td><span class='badge err'>N/A</span></td></tr>"
-            )
+            lignes.append("<tr><td>{}</td><td style='color:#d64545'>Impossible de lire la température</td>""<td><span class='badge err'>Erreur</span></td></tr>")
     if not lignes:
-        lignes.append(
-            "<tr><td>—</td><td>N/A</td><td><span class='badge'>N/A</span></td></tr>"
-        )
+        lignes.append("<tr><td>—</td><td style='color:#d64545'>Aucun capteur détecté</td>""<td><span class='badge err'>Erreur</span></td></tr>")
     return "\n".join(lignes)
 
 def prendre_alim() -> str:
     lignes = []
     bats = sorted(glob.glob("/sys/class/power_supply/BAT*"))
     if not bats:
-        return "<li>Aucune batterie détectée</li>"
+        return "<li style='color:#d64545'>Aucune batterie détectée</li>"
     for bat in bats:
         try:
             with open(f"{bat}/status", "r") as f:
@@ -763,12 +751,7 @@ def prendre_disques() -> str:
             parts = line.split()
             if len(parts) >= 7:
                 dev, fstype, size, used, free, pcent, mnt = parts[:7]
-                lignes.append(
-                    "<tr>"
-                    f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"
-                    f"<td>{free}</td><td>{fstype}</td>"
-                    "</tr>"
-                )
+                lignes.append("<tr>"f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"f"<td>{free}</td><td>{fstype}</td>""</tr>")
         if not lignes:
             return "<tr><td colspan='5'>N/A</td></tr>"
         return "\n".join(lignes)
@@ -789,13 +772,7 @@ def prendre_processus() -> str:
             if len(parts) >= 11:
                 user, pid, cpu, mem, vsz, rss, tty, stat, start, t, cmd = parts
                 cmd_ok = html.escape(cmd)[:120]
-                lignes.append(
-                    "<tr>"
-                    f"<td>{pid}</td><td>{user}</td>"
-                    f"<td>{cpu}%</td><td>{mem}%</td>"
-                    f"<td>{cmd_ok}</td>"
-                    "</tr>"
-                )
+                lignes.append("<tr>"f"<td>{pid}</td><td>{user}</td>"f"<td>{cpu}%</td><td>{mem}%</td>"f"<td>{cmd_ok}</td>""</tr>")
         if not lignes:
             return "<tr><td colspan='5'>N/A</td></tr>"
         return "\n".join(lignes)
@@ -849,15 +826,7 @@ def prendre_interfaces() -> str:
                 etat = f.read().strip()
         except Exception:
             etat = "N/A"
-        lignes.append(
-            "<tr>"
-            f"<td>{nom}</td>"
-            f"<td>{ip_v4}</td>"
-            f"<td>{ip_v6}</td>"
-            f"<td>{rx//1024}K / {tx//1024}K</td>"
-            f"<td><span class='badge'>{etat}</span></td>"
-            "</tr>"
-        )
+        lignes.append("<tr>"f"<td>{nom}</td>"f"<td>{ip_v4}</td>"f"<td>{ip_v6}</td>"f"<td>{rx//1024}K / {tx//1024}K</td>"f"<td><span class='badge'>{etat}</span></td>""</tr>")
     if not lignes:
         return "<tr><td colspan='5'>N/A</td></tr>"
     return "\n".join(lignes)
@@ -874,7 +843,7 @@ def prendre_connexions() -> str:
         for line in res.stdout.splitlines()[1:]:
             lignes.append(f"<li>{html.escape(line)}</li>")
         if not lignes:
-            return "<li>Aucune connexion</li>"
+            return "<li style='color:#d64545'>Aucune connexion</li>"
         return "\n".join(lignes)
     except Exception:
         return "<li>N/A</li>"
@@ -890,15 +859,9 @@ def prendre_web() -> str:
         )
         for ligne in res.stdout.splitlines():
             if ":80 " in ligne or ":443 " in ligne:
-                lignes.append(
-                    "<tr>"
-                    f"<td>{html.escape(ligne)}</td>"
-                    "<td>—</td><td>—</td><td>—</td><td>—</td>"
-                    "<td><span class='badge ok'>OK</span></td>"
-                    "</tr>"
-                )
+                lignes.append("<tr>"f"<td>{html.escape(ligne)}</td>""<td>—</td><td>—</td><td>—</td><td>—</td>""<td><span class='badge ok'>OK</span></td>""</tr>")
         if not lignes:
-            return "<tr><td colspan='6'>Aucun service web détecté</td></tr>"
+            return "<tr><td colspan='6' style='color:#d64545'>Aucun service web détecté</td></tr>"
         return "\n".join(lignes)
     except Exception:
         return "<tr><td colspan='6'>N/A</td></tr>"
@@ -917,7 +880,7 @@ def prendre_tout():
     if err:
         erreurs.append(err)
     if not noyau:
-        noyau = "n/a"
+        noyau = "Version du noyau non disponible"
 
     txt_uptime, err = lire_fichier("/proc/uptime")
     if err:
@@ -935,10 +898,10 @@ def prendre_tout():
     if err:
         erreurs.append(err)
         mem = {
-            "MEM_TOTALE": "n/a",
-            "MEM_UTILISEE": "n/a",
-            "MEM_UTILISEE_PCT": "n/a",
-            "MEM_LIBRE_CACHE": "n/a",
+            "MEM_TOTALE": "Donnée non disponible",
+            "MEM_UTILISEE": "Donnée non disponible",
+            "MEM_UTILISEE_PCT": "Donnée non disponible",
+            "MEM_LIBRE_CACHE": "Donnée non disponible",
         }
 
     jetons = {
@@ -966,32 +929,13 @@ def prendre_tout():
     return jetons
 
 def main():
-    parseur = argparse.ArgumentParser(
-        description="Génère un rapport HTML du système (Linux).",
-    )
-    parseur.add_argument(
-        "--page",
-        "--sortie",
-        dest="page",
-        default="rapport_supkrellm.html",
-        help="Chemin de la page principale (statique)",
-    )
-    parseur.add_argument(
-        "--donnees",
-        default="donnees_systeme.html",
-        help="Chemin de la page de données (dans l'iframe)",
-    )
-    parseur.add_argument(
-        "--intervalle",
-        type=float,
-        default=2.0,
-        help="Intervalle de mise à jour des données (secondes)",
-    )
+    parseur = argparse.ArgumentParser()
+    parseur.add_argument("--page","--sortie",dest="page",default="rapport_supkrellm.html")
+    parseur.add_argument("--donnees",default="donnees_systeme.html")
+    parseur.add_argument("--intervalle",type=float,default=2.0)
     args = parseur.parse_args()
-
     modele_page = PAGE_MODELE
     modele_donnees = PAGE_DONNEES
-
     jetons_init = prendre_tout()
     rendu_page = faire_rapport(modele_page, jetons_init)
     Path(args.page).write_text(rendu_page, encoding="utf-8")
@@ -1001,12 +945,10 @@ def main():
         while True:
             jetons = prendre_tout()
             rendu_donnees = faire_rapport(modele_donnees, jetons)
-
             donnees_path = Path(args.donnees)
             tmp_path = donnees_path.with_suffix(donnees_path.suffix + ".tmp")
             tmp_path.write_text(rendu_donnees, encoding="utf-8")
             tmp_path.replace(donnees_path)
-
             time.sleep(args.intervalle)
     except KeyboardInterrupt:
         print("Arrêt demandé par l'utilisateur.")
