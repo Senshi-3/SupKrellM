@@ -1,6 +1,6 @@
 """TODO: rajouter la partie TKinter, voir si les info irrécupérable par VM peuvent être quand même analyser (demander au SCT), """
 
-"""Dernière modif du code, (Noa) /Plus de placeholder, couleur rouge sur les erreurs, recharegment par un bouton (et l'évitation des crashs)/"""
+"""Dernière modif du code, (Noa) /Plus de placeholder, couleur rouge sur les erreurs, recharegment par un bouton (et l'évitation des crashs), Réarangement des badges/"""
 
 import argparse
 import datetime
