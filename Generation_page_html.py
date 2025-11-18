@@ -1,15 +1,17 @@
 """TODO: rajouter la partie TKinter, voir si les info irrécupérable par VM peuvent être quand même analyser (demander au SCT), """
 
-"""Dernière modif du code, (Noa) /Plus de placeholder, couleur rouge sur les erreurs, recharegment par un bouton (et l'évitation des crashs), Réarangement des badges/"""
+"""Dernière modif du code, (Noa) /Plus de placeholder, couleur rouge sur les erreurs, recharegment par un bouton (et l'évitation des crashs), Réarangement des badges, --gui et --sans-, /"""
 
 import argparse
 import datetime
 import glob
 import html
+import http.client
 import json
 import re
+import ssl
 import subprocess
-import time  
+import time
 from pathlib import Path
 
 
@@ -286,7 +288,6 @@ PAGE_MODELE = r"""
         }
 
         #bouton-rafraichir:hover{
-            transform: scale(1.05);
             background: none;
             border: 0px solid #2a366b;
             outline: 2px solid white;
@@ -294,7 +295,6 @@ PAGE_MODELE = r"""
             transition: all 0.05s ease-in-out; 
         }
         #bouton-rafraichir:active{
-            transform: scale(1);
             background: none;
             border: 0px solid #2a366b;
             outline: 2px solid white;
@@ -814,6 +814,7 @@ JETONS_BRUTS = {
     "ELEMENTS_ERREURS",
 }
 
+
 def faire_rapport(modele: str, jetons: dict) -> str:
     rendu = modele
     for cle, val in jetons.items():
@@ -825,12 +826,14 @@ def faire_rapport(modele: str, jetons: dict) -> str:
     rendu = re.sub(r"%%[A-Z0-9_]+%%", "", rendu)
     return rendu
 
+
 def lire_fichier(chemin: str):
     try:
         with open(chemin, "r", encoding="utf-8", errors="ignore") as f:
             return f.read().strip(), None
     except Exception as err:
         return None, f"{chemin}: {err}"
+
 
 def format_duree(sec_f: float) -> str:
     s = int(sec_f)
@@ -840,6 +843,7 @@ def format_duree(sec_f: float) -> str:
     if j > 0:
         return f"{j} jours, {h:02d}:{m:02d}:{s:02d}"
     return f"{h:02d}:{m:02d}:{s:02d}"
+
 
 def lire_memoire():
     txt, err = lire_fichier("/proc/meminfo")
@@ -873,6 +877,7 @@ def lire_memoire():
         "MEM_LIBRE_CACHE": f"{libre_cache:.1f} Go",
     }, None
 
+
 def prendre_temperatures() -> str:
     lignes = []
     zones = sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp"))
@@ -883,12 +888,25 @@ def prendre_temperatures() -> str:
             t_milli = int(brut)
             t_c = t_milli / 1000.0
             nom = Path(tz).parent.name
-            lignes.append("<tr><td>"f"{nom}</td><td>{t_c:.1f} °C</td>""<td><span class='badge ok'>OK</span></td></tr>")
+            lignes.append(
+                "<tr><td>"
+                f"{nom}</td><td>{t_c:.1f} °C</td>"
+                "<td><span class='badge ok'>OK</span></td></tr>"
+            )
         except Exception:
-            lignes.append("<tr><td>{}</td><td style='color:#d64545'>Impossible de lire la température</td>""<td><span class='badge err'>Erreur</span></td></tr>")
+            lignes.append(
+                "<tr><td>capteur inconnu</td>"
+                "<td style='color:#d64545'>Impossible de lire la température</td>"
+                "<td><span class='badge err'>Erreur</span></td></tr>"
+            )
     if not lignes:
-        lignes.append("<tr><td><span style='color:#d64545'>Donnée introuvable</span></td>""<td style='color:#d64545'>Aucun capteur détecté</td>""<td><span class='badge err'>Erreur</span></td></tr>")
+        lignes.append(
+            "<tr><td><span style='color:#d64545'>Donnée introuvable</span></td>"
+            "<td style='color:#d64545'>Aucun capteur détecté</td>"
+            "<td><span class='badge err'>Erreur</span></td></tr>"
+        )
     return "\n".join(lignes)
+
 
 def prendre_alim() -> str:
     lignes = []
@@ -910,6 +928,7 @@ def prendre_alim() -> str:
         lignes.append(f"<li>{nom}: {etat} — {cap}%</li>")
     return "\n".join(lignes)
 
+
 def prendre_disques() -> str:
     try:
         res = subprocess.run(
@@ -923,12 +942,24 @@ def prendre_disques() -> str:
             parts = line.split()
             if len(parts) >= 7:
                 dev, fstype, size, used, free, pcent, mnt = parts[:7]
-                lignes.append("<tr>"f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"f"<td>{free}</td><td>{fstype}</td>""</tr>")
+                lignes.append(
+                    "<tr>"
+                    f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"
+                    f"<td>{free}</td><td>{fstype}</td>"
+                    "</tr>"
+                )
         if not lignes:
-            return "<tr><td colspan='5'><span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+            return (
+                "<tr><td colspan='5'>"
+                "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+            )
         return "\n".join(lignes)
     except Exception:
-        return "<tr><td colspan='5'><span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+        return (
+            "<tr><td colspan='5'>"
+            "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+        )
+
 
 def prendre_processus() -> str:
     try:
@@ -944,12 +975,25 @@ def prendre_processus() -> str:
             if len(parts) >= 11:
                 user, pid, cpu, mem, vsz, rss, tty, stat, start, t, cmd = parts
                 cmd_ok = html.escape(cmd)[:120]
-                lignes.append("<tr>"f"<td>{pid}</td><td>{user}</td>"f"<td>{cpu}%</td><td>{mem}%</td>"f"<td>{cmd_ok}</td>""</tr>")
+                lignes.append(
+                    "<tr>"
+                    f"<td>{pid}</td><td>{user}</td>"
+                    f"<td>{cpu}%</td><td>{mem}%</td>"
+                    f"<td>{cmd_ok}</td>"
+                    "</tr>"
+                )
         if not lignes:
-            return "<tr><td colspan='5'><span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+            return (
+                "<tr><td colspan='5'>"
+                "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+            )
         return "\n".join(lignes)
     except Exception:
-        return "<tr><td colspan='5'><span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+        return (
+            "<tr><td colspan='5'>"
+            "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+        )
+
 
 def prendre_interfaces() -> str:
     ip4 = {}
@@ -1045,6 +1089,56 @@ def prendre_connexions() -> str:
     except Exception:
         return "<li><span style='color:#d64545'>Donnée introuvable</span></li>"
 
+
+def analyser_ligne_ss(ligne):
+    try:
+        parts = ligne.split()
+        if len(parts) < 5:
+            return None, None
+        local = parts[3]
+        if ":" not in local:
+            return None, None
+        # on prend le dernier ":" pour gérer IPv6
+        host_part, port = local.rsplit(":", 1)
+        host = host_part
+        if host in ("*", "0.0.0.0", "[::]", "::"):
+            host = "127.0.0.1"
+        host = host.strip("[]")
+        return host, port
+    except Exception:
+        return None, None
+
+
+def sonder_service_http(host, port, use_https=False):
+    titre = "Non détecté"
+    favicon = "Non détecté"
+    serveur = "Non détecté"
+    statut = "Inconnu"
+    proto_tls = "HTTP"
+    try:
+        timeout = 2
+        if use_https:
+            ctx = ssl._create_unverified_context()
+            conn = http.client.HTTPSConnection(host, int(port), timeout=timeout, context=ctx)
+            proto_tls = "HTTPS"
+        else:
+            conn = http.client.HTTPConnection(host, int(port), timeout=timeout)
+            proto_tls = "HTTP"
+        conn.request("GET", "/", headers={"Host": host})
+        resp = conn.getresponse()
+        statut = str(resp.status)
+        serveur = resp.getheader("Server", "Inconnu")
+        body = resp.read(4096).decode("utf-8", "ignore")
+        m = re.search(r"<title>(.*?)</title>", body, re.IGNORECASE | re.DOTALL)
+        if m:
+            titre = m.group(1).strip()
+        favicon = "/favicon.ico"
+        conn.close()
+    except Exception:
+        pass
+    return titre, favicon, serveur, proto_tls, statut
+
+
 def prendre_web() -> str:
     lignes = []
     try:
@@ -1054,16 +1148,44 @@ def prendre_web() -> str:
             text=True,
             timeout=2,
         )
+        deja_vus = set()
         for ligne in res.stdout.splitlines():
             if ":80 " in ligne or ":443 " in ligne:
-                lignes.append("<tr>"f"<td>{html.escape(ligne)}</td>""<td>Non détecté</td><td>Non détecté</td><td>Non détecté</td><td>Non détecté</td>""<td><span class='badge ok'>OK</span></td>""</tr>")
+                host, port = analyser_ligne_ss(ligne)
+                if not host or not port:
+                    continue
+                cle = (host, port)
+                if cle in deja_vus:
+                    continue
+                deja_vus.add(cle)
+                use_https = (port == "443")
+                titre, favicon, serveur, proto_tls, statut = sonder_service_http(
+                    host, port, use_https=use_https
+                )
+                lignes.append(
+                    "<tr>"
+                    f"<td>{html.escape(host)}:{port}</td>"
+                    f"<td>{html.escape(titre)}</td>"
+                    f"<td>{html.escape(favicon)}</td>"
+                    f"<td>{html.escape(serveur)}</td>"
+                    f"<td>{html.escape(proto_tls)}</td>"
+                    f"<td><span class='badge ok'>{html.escape(statut)}</span></td>"
+                    "</tr>"
+                )
         if not lignes:
-            return "<tr><td colspan='6' style='color:#d64545'>Aucun service web détecté</td></tr>"
+            return (
+                "<tr><td colspan='6' style='color:#d64545'>"
+                "Aucun service web détecté</td></tr>"
+            )
         return "\n".join(lignes)
     except Exception:
-        return "<tr><td colspan='6'><span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+        return (
+            "<tr><td colspan='6'>"
+            "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
+        )
 
-def prendre_tout():
+
+def prendre_tout(options=None):
     erreurs = []
     date_heure = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     date = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -1092,15 +1214,66 @@ def prendre_tout():
             duree = "n/a"
             erreurs.append(f"/proc/uptime: {e}")
 
-    mem, err = lire_memoire()
-    if err:
-        erreurs.append(err)
+    if options and getattr(options, "sans_memoire", False):
         mem = {
-            "MEM_TOTALE": "Donnée non disponible",
-            "MEM_UTILISEE": "Donnée non disponible",
-            "MEM_UTILISEE_PCT": "Donnée non disponible",
-            "MEM_LIBRE_CACHE": "Donnée non disponible",
+            "MEM_TOTALE": "Section désactivée",
+            "MEM_UTILISEE": "Section désactivée",
+            "MEM_UTILISEE_PCT": "Section désactivée",
+            "MEM_LIBRE_CACHE": "Section désactivée",
         }
+    else:
+        mem, err = lire_memoire()
+        if err:
+            erreurs.append(err)
+            mem = {
+                "MEM_TOTALE": "Donnée non disponible",
+                "MEM_UTILISEE": "Donnée non disponible",
+                "MEM_UTILISEE_PCT": "Donnée non disponible",
+                "MEM_LIBRE_CACHE": "Donnée non disponible",
+            }
+
+    if options and getattr(options, "sans_materiel", False):
+        lignes_t = (
+            "<tr><td colspan='3'>Section désactivée par les paramètres</td></tr>"
+        )
+        elements_alim = (
+            "<li>Section désactivée par les paramètres</li>"
+        )
+    else:
+        lignes_t = prendre_temperatures()
+        elements_alim = prendre_alim()
+
+    if options and getattr(options, "sans_disques", False):
+        lignes_disques = (
+            "<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>"
+        )
+    else:
+        lignes_disques = prendre_disques()
+
+    if options and getattr(options, "sans_processus", False):
+        lignes_processus = (
+            "<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>"
+        )
+    else:
+        lignes_processus = prendre_processus()
+
+    if options and getattr(options, "sans_reseau", False):
+        lignes_interfaces = (
+            "<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>"
+        )
+        elements_connexions = (
+            "<li>Section désactivée par les paramètres</li>"
+        )
+    else:
+        lignes_interfaces = prendre_interfaces()
+        elements_connexions = prendre_connexions()
+
+    if options and getattr(options, "sans_web", False):
+        lignes_web = (
+            "<tr><td colspan='6'>Section désactivée par les paramètres</td></tr>"
+        )
+    else:
+        lignes_web = prendre_web()
 
     jetons = {
         "NOM_HOTE": nom_hote,
@@ -1112,13 +1285,13 @@ def prendre_tout():
         "MEM_UTILISEE": mem["MEM_UTILISEE"],
         "MEM_UTILISEE_PCT": mem["MEM_UTILISEE_PCT"],
         "MEM_LIBRE_CACHE": mem["MEM_LIBRE_CACHE"],
-        "LIGNES_TEMPERATURES": prendre_temperatures(),
-        "ELEMENTS_ALIM": prendre_alim(),
-        "LIGNES_DISQUES": prendre_disques(),
-        "LIGNES_PROCESSUS": prendre_processus(),
-        "LIGNES_INTERFACES": prendre_interfaces(),
-        "ELEMENTS_CONNEXIONS": prendre_connexions(),
-        "LIGNES_WEB": prendre_web(),
+        "LIGNES_TEMPERATURES": lignes_t,
+        "ELEMENTS_ALIM": elements_alim,
+        "LIGNES_DISQUES": lignes_disques,
+        "LIGNES_PROCESSUS": lignes_processus,
+        "LIGNES_INTERFACES": lignes_interfaces,
+        "ELEMENTS_CONNEXIONS": elements_connexions,
+        "LIGNES_WEB": lignes_web,
         "ELEMENTS_ERREURS": (
             "\n".join(f"<li>{html.escape(e)}</li>" for e in erreurs)
             if erreurs
@@ -1127,24 +1300,130 @@ def prendre_tout():
     }
     return jetons
 
+
+def lancer_gui(args):
+    try:
+        import tkinter as tk
+        from tkinter import ttk
+    except Exception as e:
+        print("Impossible de lancer l'interface graphique (tkinter manquant ?):", e)
+        return
+
+    root = tk.Tk()
+    root.title("SupKrellM - Vue temps réel")
+
+    frame = ttk.Frame(root, padding=10)
+    frame.pack(fill="both", expand=True)
+
+    label_hote_t = ttk.Label(frame, text="Hôte :")
+    label_hote_v = ttk.Label(frame, text="...")
+    label_date_t = ttk.Label(frame, text="Date :")
+    label_date_v = ttk.Label(frame, text="...")
+    label_uptime_t = ttk.Label(frame, text="Uptime :")
+    label_uptime_v = ttk.Label(frame, text="...")
+    label_mem_t = ttk.Label(frame, text="Mémoire utilisée :")
+    label_mem_v = ttk.Label(frame, text="...")
+
+    label_hote_t.grid(row=0, column=0, sticky="w")
+    label_hote_v.grid(row=0, column=1, sticky="w")
+    label_date_t.grid(row=1, column=0, sticky="w")
+    label_date_v.grid(row=1, column=1, sticky="w")
+    label_uptime_t.grid(row=2, column=0, sticky="w")
+    label_uptime_v.grid(row=2, column=1, sticky="w")
+    label_mem_t.grid(row=3, column=0, sticky="w")
+    label_mem_v.grid(row=3, column=1, sticky="w")
+
+    label_details = ttk.Label(frame, text="Résumé (processus / réseau / web) :")
+    label_details.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky="w")
+
+    text_details = tk.Text(frame, height=15, width=80)
+    text_details.grid(row=5, column=0, columnspan=2, sticky="nsew")
+
+    frame.rowconfigure(5, weight=1)
+    frame.columnconfigure(1, weight=1)
+
+    def nettoyer_html(texte):
+        try:
+            return re.sub(r"<[^>]+>", " ", texte)
+        except Exception:
+            return texte
+
+    def maj():
+        jetons = prendre_tout(args)
+        label_hote_v.config(text=jetons.get("NOM_HOTE", "inconnu"))
+        label_date_v.config(text=jetons.get("DATE_HEURE", ""))
+        label_uptime_v.config(text=jetons.get("DUREE_FONCTIONNEMENT", ""))
+        label_mem_v.config(
+            text=f"{jetons.get('MEM_UTILISEE', '')} ({jetons.get('MEM_UTILISEE_PCT', '')})"
+        )
+
+        texte = ""
+        texte += "Processus:\n"
+        texte += nettoyer_html(jetons.get("LIGNES_PROCESSUS", "")) + "\n\n"
+        texte += "Réseau (interfaces):\n"
+        texte += nettoyer_html(jetons.get("LIGNES_INTERFACES", "")) + "\n\n"
+        texte += "Services web:\n"
+        texte += nettoyer_html(jetons.get("LIGNES_WEB", "")) + "\n\n"
+        texte += "Erreurs:\n"
+        texte += nettoyer_html(jetons.get("ELEMENTS_ERREURS", "")) + "\n"
+
+        text_details.delete("1.0", tk.END)
+        text_details.insert("1.0", texte)
+
+        try:
+            interval_ms = int(float(args.intervalle) * 1000)
+        except Exception:
+            interval_ms = 2000
+        root.after(interval_ms, maj)
+
+    maj()
+    root.mainloop()
+
+
 def main():
     parseur = argparse.ArgumentParser()
-    parseur.add_argument("--page","--sortie",dest="page",default="rapport_supkrellm.html")
-    parseur.add_argument("--donnees",default="donnees_systeme.html")
-    parseur.add_argument("--intervalle",type=float,default=2.0)
+    parseur.add_argument(
+        "--page", "--sortie", dest="page", default="rapport_supkrellm.html"
+    )
+    parseur.add_argument("--donnees", default="donnees_systeme.html")
+    parseur.add_argument("--intervalle", type=float, default=2.0)
+    parseur.add_argument("--dossier", default=".")
+    parseur.add_argument("--gui", action="store_true")
+
+    parseur.add_argument("--sans-memoire", action="store_true")
+    parseur.add_argument("--sans-disques", action="store_true")
+    parseur.add_argument("--sans-processus", action="store_true")
+    parseur.add_argument("--sans-reseau", action="store_true")
+    parseur.add_argument("--sans-web", action="store_true")
+    parseur.add_argument("--sans-materiel", action="store_true")
+
     args = parseur.parse_args()
+
+    if args.gui:
+        lancer_gui(args)
+        return
+
+    base = Path(args.dossier)
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    page_path = base / args.page
+    donnees_path = base / args.donnees
+
     modele_page = PAGE_MODELE
     modele_donnees = PAGE_DONNEES
-    jetons_init = prendre_tout()
+
+    jetons_init = prendre_tout(args)
     rendu_page = faire_rapport(modele_page, jetons_init)
-    Path(args.page).write_text(rendu_page, encoding="utf-8")
-    print(f"Page principale -> {Path(args.page).resolve()}")
+    page_path.write_text(rendu_page, encoding="utf-8")
+    print(f"Page principale -> {page_path.resolve()}")
 
     try:
         while True:
-            jetons = prendre_tout()
+            jetons = prendre_tout(args)
             rendu_donnees = faire_rapport(modele_donnees, jetons)
-            donnees_path = Path(args.donnees)
             tmp_path = donnees_path.with_suffix(donnees_path.suffix + ".tmp")
             tmp_path.write_text(rendu_donnees, encoding="utf-8")
             tmp_path.replace(donnees_path)
@@ -1152,6 +1431,6 @@ def main():
     except KeyboardInterrupt:
         print("Arrêt demandé par l'utilisateur.")
 
+
 if __name__ == "__main__":
     main()
-
