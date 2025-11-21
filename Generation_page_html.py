@@ -1,6 +1,6 @@
 """TODO: rajouter la partie TKinter, voir si les info irrécupérable par VM peuvent être quand même analyser (demander au SCT), """
 
-"""Dernière modif du code, (Noa) /Plus de placeholder, couleur rouge sur les erreurs, recharegment par un bouton (et l'évitation des crashs), Réarangement des badges, --gui et --sans-, /"""
+"""Dernière modif du code, (Noa) /Plus de placeholder, couleur rouge sur les erreurs, recharegment par un bouton (pour éviter des crashs), Réarangement des badges, --gui et --sans-, /"""
 
 import argparse
 import datetime
@@ -1300,86 +1300,6 @@ def prendre_tout(options=None):
     }
     return jetons
 
-
-def lancer_gui(args):
-    try:
-        import tkinter as tk
-        from tkinter import ttk
-    except Exception as e:
-        print("Impossible de lancer l'interface graphique (tkinter manquant ?):", e)
-        return
-
-    root = tk.Tk()
-    root.title("SupKrellM - Vue temps réel")
-
-    frame = ttk.Frame(root, padding=10)
-    frame.pack(fill="both", expand=True)
-
-    label_hote_t = ttk.Label(frame, text="Hôte :")
-    label_hote_v = ttk.Label(frame, text="...")
-    label_date_t = ttk.Label(frame, text="Date :")
-    label_date_v = ttk.Label(frame, text="...")
-    label_uptime_t = ttk.Label(frame, text="Uptime :")
-    label_uptime_v = ttk.Label(frame, text="...")
-    label_mem_t = ttk.Label(frame, text="Mémoire utilisée :")
-    label_mem_v = ttk.Label(frame, text="...")
-
-    label_hote_t.grid(row=0, column=0, sticky="w")
-    label_hote_v.grid(row=0, column=1, sticky="w")
-    label_date_t.grid(row=1, column=0, sticky="w")
-    label_date_v.grid(row=1, column=1, sticky="w")
-    label_uptime_t.grid(row=2, column=0, sticky="w")
-    label_uptime_v.grid(row=2, column=1, sticky="w")
-    label_mem_t.grid(row=3, column=0, sticky="w")
-    label_mem_v.grid(row=3, column=1, sticky="w")
-
-    label_details = ttk.Label(frame, text="Résumé (processus / réseau / web) :")
-    label_details.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky="w")
-
-    text_details = tk.Text(frame, height=15, width=80)
-    text_details.grid(row=5, column=0, columnspan=2, sticky="nsew")
-
-    frame.rowconfigure(5, weight=1)
-    frame.columnconfigure(1, weight=1)
-
-    def nettoyer_html(texte):
-        try:
-            return re.sub(r"<[^>]+>", " ", texte)
-        except Exception:
-            return texte
-
-    def maj():
-        jetons = prendre_tout(args)
-        label_hote_v.config(text=jetons.get("NOM_HOTE", "inconnu"))
-        label_date_v.config(text=jetons.get("DATE_HEURE", ""))
-        label_uptime_v.config(text=jetons.get("DUREE_FONCTIONNEMENT", ""))
-        label_mem_v.config(
-            text=f"{jetons.get('MEM_UTILISEE', '')} ({jetons.get('MEM_UTILISEE_PCT', '')})"
-        )
-
-        texte = ""
-        texte += "Processus:\n"
-        texte += nettoyer_html(jetons.get("LIGNES_PROCESSUS", "")) + "\n\n"
-        texte += "Réseau (interfaces):\n"
-        texte += nettoyer_html(jetons.get("LIGNES_INTERFACES", "")) + "\n\n"
-        texte += "Services web:\n"
-        texte += nettoyer_html(jetons.get("LIGNES_WEB", "")) + "\n\n"
-        texte += "Erreurs:\n"
-        texte += nettoyer_html(jetons.get("ELEMENTS_ERREURS", "")) + "\n"
-
-        text_details.delete("1.0", tk.END)
-        text_details.insert("1.0", texte)
-
-        try:
-            interval_ms = int(float(args.intervalle) * 1000)
-        except Exception:
-            interval_ms = 2000
-        root.after(interval_ms, maj)
-
-    maj()
-    root.mainloop()
-
-
 def main():
     parseur = argparse.ArgumentParser()
     parseur.add_argument(
@@ -1388,7 +1308,7 @@ def main():
     parseur.add_argument("--donnees", default="donnees_systeme.html")
     parseur.add_argument("--intervalle", type=float, default=2.0)
     parseur.add_argument("--dossier", default=".")
-    parseur.add_argument("--gui", action="store_true")
+    parseur.add_argument("--gui")
 
     parseur.add_argument("--sans-memoire", action="store_true")
     parseur.add_argument("--sans-disques", action="store_true")
@@ -1398,10 +1318,6 @@ def main():
     parseur.add_argument("--sans-materiel", action="store_true")
 
     args = parseur.parse_args()
-
-    if args.gui:
-        lancer_gui(args)
-        return
 
     base = Path(args.dossier)
     try:
