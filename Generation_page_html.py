@@ -379,7 +379,7 @@ PAGE_MODELE = r"""
                 font-size: 2vw; 
             }
             main{ 
-                max-width: 90vw; 
+                max-width: 95vw; 
             }
             h2{
                 font-size: 3vw; 
@@ -412,7 +412,7 @@ PAGE_MODELE = r"""
                 font-size: 1.5vw; 
             }
             main{
-                max-width: 80vw;
+                max-width: 90vw;
             }
             h2{
                 font-size: 2.7vw;
@@ -665,6 +665,71 @@ PAGE_DONNEES = r"""
             100%{ 
                 outline: 0; 
                 outline-offset: 0; 
+            }
+        }
+        @media (max-width: 767px){
+            #texte-titre{ 
+                font-size: 4vw;
+            }
+            #navigateur{ 
+                gap: 1vw; 
+            }
+            .texte-navigateur, th, td, li, footer{ 
+                font-size: 2vw; 
+            }
+            main{ 
+                max-width: 100vw; 
+            }
+            h2{
+                font-size: 3vw; 
+            }
+            .section{ 
+                scroll-margin-top: 10vw;
+            }
+            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2{ 
+                border-radius: 0.5em;
+            }
+            .etiquette, .badge{
+                font-size: 1.7vw;
+            }
+            .valeur{
+                font-size: 2.3vw;
+            }
+            .grille3, .grille2{
+                gap: 7px;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1700px){
+            #texte-titre{ 
+                font-size: 3vw; 
+            }
+            #navigateur{
+                gap: 2vw; 
+            }
+            .texte-navigateur, th, td, li, footer{
+                font-size: 1.5vw; 
+            }
+            main{
+                max-width: 80vw;
+            }
+            h2{
+                font-size: 2.7vw;
+            }
+            .section{
+                scroll-margin-top: 9vw;
+            }
+            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2 {
+                border-radius: 0.5em;
+            }
+            .etiquette, .badge{
+                font-size: 1.3vw;
+            }
+            .valeur{ 
+                font-size: 1.8vw;
+            }
+            .grille3, .grille2{
+                gap: 10px;
             }
         }
     </style>
