@@ -888,23 +888,11 @@ def prendre_temperatures() -> str:
             t_milli = int(brut)
             t_c = t_milli / 1000.0
             nom = Path(tz).parent.name
-            lignes.append(
-                "<tr><td>"
-                f"{nom}</td><td>{t_c:.1f} °C</td>"
-                "<td><span class='badge ok'>OK</span></td></tr>"
-            )
+            lignes.append("<tr><td>"f"{nom}</td><td>{t_c:.1f} °C</td>""<td><span class='badge ok'>OK</span></td></tr>")
         except Exception:
-            lignes.append(
-                "<tr><td>capteur inconnu</td>"
-                "<td style='color:#d64545'>Impossible de lire la température</td>"
-                "<td><span class='badge err'>Erreur</span></td></tr>"
-            )
+            lignes.append("<tr><td>capteur inconnu</td>""<td style='color:#d64545'>Impossible de lire la température</td>""<td><span class='badge err'>Erreur</span></td></tr>")
     if not lignes:
-        lignes.append(
-            "<tr><td><span style='color:#d64545'>Donnée introuvable</span></td>"
-            "<td style='color:#d64545'>Aucun capteur détecté</td>"
-            "<td><span class='badge err'>Erreur</span></td></tr>"
-        )
+        lignes.append("<tr><td><span style='color:#d64545'>Donnée introuvable</span></td>""<td style='color:#d64545'>Aucun capteur détecté</td>""<td><span class='badge err'>Erreur</span></td></tr>")
     return "\n".join(lignes)
 
 
@@ -944,21 +932,15 @@ def prendre_disques() -> str:
                 dev, fstype, size, used, free, pcent, mnt = parts[:7]
                 lignes.append(
                     "<tr>"
-                    f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"
-                    f"<td>{free}</td><td>{fstype}</td>"
+                        f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"
+                        f"<td>{free}</td><td>{fstype}</td>"
                     "</tr>"
                 )
         if not lignes:
-            return (
-                "<tr><td colspan='5'>"
-                "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
-            )
+            return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
         return "\n".join(lignes)
     except Exception:
-        return (
-            "<tr><td colspan='5'>"
-            "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
-        )
+        return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
 
 
 def prendre_processus() -> str:
@@ -977,22 +959,16 @@ def prendre_processus() -> str:
                 cmd_ok = html.escape(cmd)[:120]
                 lignes.append(
                     "<tr>"
-                    f"<td>{pid}</td><td>{user}</td>"
-                    f"<td>{cpu}%</td><td>{mem}%</td>"
-                    f"<td>{cmd_ok}</td>"
+                        f"<td>{pid}</td><td>{user}</td>"
+                        f"<td>{cpu}%</td><td>{mem}%</td>"
+                        f"<td>{cmd_ok}</td>"
                     "</tr>"
                 )
         if not lignes:
-            return (
-                "<tr><td colspan='5'>"
-                "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
-            )
+            return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
         return "\n".join(lignes)
     except Exception:
-        return (
-            "<tr><td colspan='5'>"
-            "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
-        )
+        return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
 
 
 def prendre_interfaces() -> str:
@@ -1059,11 +1035,11 @@ def prendre_interfaces() -> str:
 
         lignes.append(
             "<tr>"
-            f"<td>{nom}</td>"
-            f"<td>{ip_v4}</td>"
-            f"<td>{ip_v6}</td>"
-            f"<td>{rx//1024}K / {tx//1024}K</td>"
-            f"<td><span class='badge {classe}'>{etat_texte}</span></td>"
+                f"<td>{nom}</td>"
+                f"<td>{ip_v4}</td>"
+                f"<td>{ip_v6}</td>"
+                f"<td>{rx//1024}K / {tx//1024}K</td>"
+                f"<td><span class='badge {classe}'>{etat_texte}</span></td>"
             "</tr>"
         )
 
@@ -1098,7 +1074,6 @@ def analyser_ligne_ss(ligne):
         local = parts[3]
         if ":" not in local:
             return None, None
-        # on prend le dernier ":" pour gérer IPv6
         host_part, port = local.rsplit(":", 1)
         host = host_part
         if host in ("*", "0.0.0.0", "[::]", "::"):
@@ -1142,12 +1117,7 @@ def sonder_service_http(host, port, use_https=False):
 def prendre_web() -> str:
     lignes = []
     try:
-        res = subprocess.run(
-            ["ss", "-ntlp"],
-            capture_output=True,
-            text=True,
-            timeout=2,
-        )
+        res = subprocess.run(["ss", "-ntlp"],capture_output=True,text=True,timeout=2,)
         deja_vus = set()
         for ligne in res.stdout.splitlines():
             if ":80 " in ligne or ":443 " in ligne:
@@ -1159,30 +1129,22 @@ def prendre_web() -> str:
                     continue
                 deja_vus.add(cle)
                 use_https = (port == "443")
-                titre, favicon, serveur, proto_tls, statut = sonder_service_http(
-                    host, port, use_https=use_https
-                )
+                titre, favicon, serveur, proto_tls, statut = sonder_service_http(host, port, use_https=use_https)
                 lignes.append(
                     "<tr>"
-                    f"<td>{html.escape(host)}:{port}</td>"
-                    f"<td>{html.escape(titre)}</td>"
-                    f"<td>{html.escape(favicon)}</td>"
-                    f"<td>{html.escape(serveur)}</td>"
-                    f"<td>{html.escape(proto_tls)}</td>"
-                    f"<td><span class='badge ok'>{html.escape(statut)}</span></td>"
+                        f"<td>{html.escape(host)}:{port}</td>"
+                        f"<td>{html.escape(titre)}</td>"
+                        f"<td>{html.escape(favicon)}</td>"
+                        f"<td>{html.escape(serveur)}</td>"
+                        f"<td>{html.escape(proto_tls)}</td>"
+                        f"<td><span class='badge ok'>{html.escape(statut)}</span></td>"
                     "</tr>"
                 )
         if not lignes:
-            return (
-                "<tr><td colspan='6' style='color:#d64545'>"
-                "Aucun service web détecté</td></tr>"
-            )
+            return ("<tr><td colspan='6' style='color:#d64545'>""Aucun service web détecté</td></tr>")
         return "\n".join(lignes)
     except Exception:
-        return (
-            "<tr><td colspan='6'>"
-            "<span style='color:#d64545'>Donnée introuvable</span></td></tr>"
-        )
+        return ("<tr><td colspan='6'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
 
 
 def prendre_tout(options=None):
@@ -1233,45 +1195,30 @@ def prendre_tout(options=None):
             }
 
     if options and getattr(options, "sans_materiel", False):
-        lignes_t = (
-            "<tr><td colspan='3'>Section désactivée par les paramètres</td></tr>"
-        )
-        elements_alim = (
-            "<li>Section désactivée par les paramètres</li>"
-        )
+        lignes_t = ("<tr><td colspan='3'>Section désactivée par les paramètres</td></tr>")
+        elements_alim = ("<li>Section désactivée par les paramètres</li>")
     else:
         lignes_t = prendre_temperatures()
         elements_alim = prendre_alim()
-
     if options and getattr(options, "sans_disques", False):
-        lignes_disques = (
-            "<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>"
-        )
+        lignes_disques = ("<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>")
     else:
         lignes_disques = prendre_disques()
 
     if options and getattr(options, "sans_processus", False):
-        lignes_processus = (
-            "<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>"
-        )
+        lignes_processus = ("<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>")
     else:
         lignes_processus = prendre_processus()
 
     if options and getattr(options, "sans_reseau", False):
-        lignes_interfaces = (
-            "<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>"
-        )
-        elements_connexions = (
-            "<li>Section désactivée par les paramètres</li>"
-        )
+        lignes_interfaces = ("<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>")
+        elements_connexions = ("<li>Section désactivée par les paramètres</li>")
     else:
         lignes_interfaces = prendre_interfaces()
         elements_connexions = prendre_connexions()
 
     if options and getattr(options, "sans_web", False):
-        lignes_web = (
-            "<tr><td colspan='6'>Section désactivée par les paramètres</td></tr>"
-        )
+        lignes_web = ("<tr><td colspan='6'>Section désactivée par les paramètres</td></tr>")
     else:
         lignes_web = prendre_web()
 
@@ -1302,9 +1249,7 @@ def prendre_tout(options=None):
 
 def main():
     parseur = argparse.ArgumentParser()
-    parseur.add_argument(
-        "--page", "--sortie", dest="page", default="rapport_supkrellm.html"
-    )
+    parseur.add_argument("--page", dest="page", default="rapport_supkrellm.html")
     parseur.add_argument("--donnees", default="donnees_systeme.html")
     parseur.add_argument("--intervalle", type=float, default=2.0)
     parseur.add_argument("--dossier", default=".")
@@ -1318,7 +1263,6 @@ def main():
     parseur.add_argument("--sans-materiel", action="store_true")
 
     args = parseur.parse_args()
-
     base = Path(args.dossier)
     try:
         base.mkdir(parents=True, exist_ok=True)
@@ -1327,14 +1271,12 @@ def main():
 
     page_path = base / args.page
     donnees_path = base / args.donnees
-
     modele_page = PAGE_MODELE
     modele_donnees = PAGE_DONNEES
-
     jetons_init = prendre_tout(args)
     rendu_page = faire_rapport(modele_page, jetons_init)
     page_path.write_text(rendu_page, encoding="utf-8")
-    print(f"Page principale -> {page_path.resolve()}")
+    print(f"Rapport -> {page_path.resolve()}")
 
     try:
         while True:
@@ -1345,8 +1287,7 @@ def main():
             tmp_path.replace(donnees_path)
             time.sleep(args.intervalle)
     except KeyboardInterrupt:
-        print("Arrêt demandé par l'utilisateur.")
-
+        print("L'arrêt a était demandé.")
 
 if __name__ == "__main__":
     main()
