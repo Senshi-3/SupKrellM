@@ -1084,35 +1084,50 @@ def analyser_ligne_ss(ligne):
         return None, None
 
 
-def sonder_service_http(host, port, use_https=False):
-    titre = "Non détecté"
-    favicon = "Non détecté"
-    serveur = "Non détecté"
-    statut = "Inconnu"
-    proto_tls = "HTTP"
+def sonder_service_http(hote: str, port: str, use_https: bool = False):
+    titre_page = "Titre indisponible"
+    chemin_favicon = "Favicon inconnu"
+    nom_serveur = "Inconnu"
+    statut_http = "N/A"
+    protocole = "HTTP"
+    delai = 2
+    if use_https:
+        try:
+            contexte = ssl._create_unverified_context()
+            connexion = http.client.HTTPSConnection(hote, int(port), timeout=delai, context=contexte)
+            protocole = "HTTPS"
+        except Exception as e:
+            return titre_page, chemin_favicon, nom_serveur, protocole, statut_http
+    else:
+        try:
+            connexion = http.client.HTTPConnection(hote, int(port), timeout=delai)
+            protocole = "HTTP"
+        except Exception:
+            return titre_page, chemin_favicon, nom_serveur, protocole, statut_http
+
     try:
-        timeout = 2
-        if use_https:
-            ctx = ssl._create_unverified_context()
-            conn = http.client.HTTPSConnection(host, int(port), timeout=timeout, context=ctx)
-            proto_tls = "HTTPS"
-        else:
-            conn = http.client.HTTPConnection(host, int(port), timeout=timeout)
-            proto_tls = "HTTP"
-        conn.request("GET", "/", headers={"Host": host})
-        resp = conn.getresponse()
-        statut = str(resp.status)
-        serveur = resp.getheader("Server", "Inconnu")
-        body = resp.read(4096).decode("utf-8", "ignore")
-        m = re.search(r"<title>(.*?)</title>", body, re.IGNORECASE | re.DOTALL)
-        if m:
-            titre = m.group(1).strip()
-        favicon = "/favicon.ico"
-        conn.close()
+        connexion.request("GET", "/")
+        reponse = connexion.getresponse()
+        statut_http = str(reponse.status)
+        nom_serveur = reponse.getheader("Server") or "Inconnu"
+        corps = reponse.read(4096).decode("utf-8", errors="ignore")
+
+        debut_titre = corps.lower().find("<title>")
+        fin_titre = corps.lower().find("</title>")
+
+        if debut_titre != -1 and fin_titre != -1 and fin_titre > debut_titre:
+            brut = corps[debut_titre + 7:fin_titre]
+            titre_page = brut.strip()
+        chemin_favicon = "/favicon.ico"
+
     except Exception:
         pass
-    return titre, favicon, serveur, proto_tls, statut
-
+    finally:
+        try:
+            connexion.close()
+        except Exception:
+            pass
+    return titre_page, chemin_favicon, nom_serveur, protocole, statut_http
 
 def prendre_web() -> str:
     lignes = []
