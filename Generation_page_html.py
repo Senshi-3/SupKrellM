@@ -1,15 +1,17 @@
-"""todo: plus placeholder donc mettre en erreurs"""
+"""TODO: rajouter la partie TKinter, voir si les info irrécupérable par VM peuvent être quand même analyser (demander au SCT), """
 
-"""Dernière modif du code, (Noa) /Moins de placeholder, couleur rouge sur les erreurs, recharegment toute les 2sec/"""
+"""Dernière modif du code, (Noa) /Plus de placeholder, couleur rouge sur les erreurs, recharegment par un bouton (pour éviter des crashs), Réarangement des badges, --gui et --sans-, /"""
 
 import argparse
 import datetime
 import glob
 import html
+import http.client
 import json
 import re
+import ssl
 import subprocess
-import time  
+import time
 from pathlib import Path
 
 
@@ -25,30 +27,32 @@ PAGE_MODELE = r"""
     <link rel="icon" href="https://friconix.com/png/fi-cnsuxx-linux.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap">
     <style>
-        :root {
+        :root{
             --ok: #1f9d55;
             --warn: #c07f00;
             --err: #d64545;
             --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
         }
 
-        html, body {
+        html, body{
             margin: 0;
             padding: 0;
+            height: 100%;
             background-color: rgb(11, 16, 32);
             font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif;
             scroll-behavior: smooth;
+            overflow-y: hidden;
         }
 
-        a {
+        a{
             text-decoration: none;
         }
 
-        a:hover {
+        a:hover{
             transform: scale(1.1);
         }
 
-        header {
+        header{
             position: sticky;
             top: 0;
             padding-bottom: 1vw;
@@ -64,18 +68,18 @@ PAGE_MODELE = r"""
             overflow: hidden;
         }
 
-        #texte-titre {
+        #texte-titre{
             font-family: "Audiowide", sans-serif;
             color: white;
         }
 
-        #navigateur {
+        #navigateur{
             display: flex;
             gap: 2vw;
             align-items: flex-start;
         }
 
-        .texte-navigateur {
+        .texte-navigateur{
             font-family: "Audiowide", sans-serif;
             color: #4ca3cb;
             position: relative;
@@ -83,45 +87,45 @@ PAGE_MODELE = r"""
             opacity: 0;
         }
 
-        .texte-navigateur:nth-child(1) { animation-delay: 0s; }
-        .texte-navigateur:nth-child(2) { animation-delay: 0.4s; }
-        .texte-navigateur:nth-child(3) { animation-delay: 0.8s; }
-        .texte-navigateur:nth-child(4) { animation-delay: 1.2s; }
-        .texte-navigateur:nth-child(5) { animation-delay: 1.6s; }
-        .texte-navigateur:nth-child(6) { animation-delay: 2s; }
-        .texte-navigateur:nth-child(7) { animation-delay: 2.4s; }
-        .texte-navigateur:nth-child(8) { animation-delay: 2.8s; color: var(--err); }
+        .texte-navigateur:nth-child(1) {animation-delay: 0s;}
+        .texte-navigateur:nth-child(2) {animation-delay: 0.4s;}
+        .texte-navigateur:nth-child(3) {animation-delay: 0.8s;}
+        .texte-navigateur:nth-child(4) {animation-delay: 1.2s; }
+        .texte-navigateur:nth-child(5) {animation-delay: 1.6s;}
+        .texte-navigateur:nth-child(6) {animation-delay: 2s}
+        .texte-navigateur:nth-child(7) {animation-delay: 2.4s;}
+        .texte-navigateur:nth-child(8) {animation-delay: 2.8s; color: var(--err);}
 
-        main {
+        main{
             max-width: 100vw;
             margin: 0 auto;
             padding: 0;
         }
 
-        h2 {
+        h2{
             display: inline-block;
             color: #287da1;
         }
 
-        .section {
+        .section{
             scroll-margin-top: 7vw;
         }
 
-        section:target {
+        section:target{
             animation: mis-en-evidence 0.3s ease-out;
         }
 
         section:target .grille3,
         section:target .grille2,
-        section:target .bloc-table {
+        section:target .bloc-table{
             animation: bordure-evidence 1s linear;
         }
 
-        section:target .bloc-erreurs {
+        section:target .bloc-erreurs{
             animation: bordure-evidence-err 1s linear;
         }
 
-        .bloc {
+        .bloc{
             background-color: rgba(24, 35, 58, 0.733);
             padding: 1vw;
             border-radius: 1em;
@@ -130,7 +134,7 @@ PAGE_MODELE = r"""
             flex-direction: column;
         }
 
-        .bloc-table {
+        .bloc-table{
             background-color: rgba(24, 35, 58, 0);
             padding-bottom: 1vw;
             border-radius: 1em;
@@ -139,7 +143,7 @@ PAGE_MODELE = r"""
             flex-direction: column;
         }
 
-        .bloc-erreurs {
+        .bloc-erreurs{
             border-left: 3px solid var(--err);
             padding: 1vw;
             border-radius: 1em;
@@ -147,77 +151,88 @@ PAGE_MODELE = r"""
             margin-bottom: 1vw;
         }
 
-        .bloc:hover {
+        .bloc:hover{
             box-shadow: 0 0 3px 3px #2c627a;
         }
 
-        .bloc-erreurs:hover {
+        .bloc-erreurs:hover{
             box-shadow: 0 0 3px 3px #7a2c2c;
         }
 
-        .etiquette {
+        .etiquette{
             color: #91c2d89a;
             font-family: var(--mono);
             padding-bottom: 1vw;
             user-select: none;
         }
 
-        .valeur {
+        .valeur{
             color: #c9d1ff;
             font-family: var(--mono);
         }
 
-        .grille3 {
+        .grille3{
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 16px;
             border-radius: 1em;
         }
 
-        .grille2 {
+        .grille2{
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
             border-radius: 1em;
         }
 
-        table {
+        table{
             width: 100%;
             border-collapse: collapse;
         }
 
-        th, td {
+        th, td{
             padding: 1vw;
             border-bottom: 1px solid #1c2347;
             text-align: left;
             color: #c9d1ff;
         }
 
-        th {
+        th{
             color: #c9d1ff;
         }
 
-        li {
+        li{
             color: #c9d1ff;
         }
 
-        ul, ol {
+        ul, ol{
             margin-left: 1vw;
             padding-left: 1.2rem;
         }
 
-        #texte-erreurs {
+        #texte-erreurs{
             color: #a12828;
         }
 
-        footer {
+        footer{
             color: #a8b0d9;
+            position: sticky;
+            bottom: 0;
             font-size: 0.8vw;
             text-align: center;
             margin: 1vw;
+            padding: 1vw;
+            z-index: 10;
+        }
+        hr{
+            box-shadow: 0 0 20px 50px rgb(11, 16, 32);
+            color: transparent;
+            position: sticky;
+            bottom: 0;
+            z-index: 9;
         }
 
-        .badge {
+        .badge{
             display: inline-block;
             padding: 0.15rem 0.5rem;
             border-radius: 3em;
@@ -246,53 +261,177 @@ PAGE_MODELE = r"""
             background: rgba(214,69,69,.08);
         }
 
-        @keyframes mis-en-evidence {
-            0% { transform: scale(1); }
-            40% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+        iframe{
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        iframe::-webkit-scrollbar{
+            display: none;
         }
 
-        @keyframes bordure-evidence {
-            0% { outline: 2px solid #5e7d8aab; outline-offset: 0.3vw; }
-            90% { outline: 1px solid #5e7d8aab; outline-offset: 0.3vw; }
-            100% { outline: 0; outline-offset: 0; }
+        #bouton-rafraichir{
+            margin-left: 1vw;
+            padding: 0.2rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid #2a366b;
+            background: #0e1430;
+            color: #a8b0d9;
+            font-family: inherit;
+            font-size: 0.8vw;
+            outline: 0px solid white;
+            outline-offset: 0.6vw;
+            transition: all 0.05s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4vw;
+            vertical-align: middle;
         }
 
-        @keyframes bordure-evidence-err {
-            0% { outline: 2px solid var(--err); outline-offset: 0.3vw; }
-            90% { outline: 1px solid var(--err); outline-offset: 0.3vw; }
-            100% { outline: 0; outline-offset: 0; }
+        #bouton-rafraichir:hover{
+            background: none;
+            border: 0px solid #2a366b;
+            outline: 2px solid white;
+            outline-offset: 0.3vw;
+            transition: all 0.05s ease-in-out; 
+        }
+        #bouton-rafraichir:active{
+            background: none;
+            border: 0px solid #2a366b;
+            outline: 2px solid white;
+            outline-offset: 0.3vw;
+            transition: all 0.01s ease-in-out; 
+        }
+        #bouton-rafraichir:hover #logo-rafraichir{
+            animation: rotation-logo-rafraichir 1s forwards;
         }
 
-        @keyframes entrer-nav-text {
-            0% { top: 100px; opacity: 0; }
-            100% { top: 0; opacity: 1; }
+        @keyframes rotation-logo-rafraichir{
+            0%{
+                transform: rotate(0deg);
+            }
+            100%{ 
+                transform: rotate(359deg); 
+            }
         }
 
-        @media (max-width: 767px) {
-            #texte-titre { font-size: 4vw; }
-            #navigateur { gap: 1vw; }
-            .texte-navigateur, th, td, li, footer { font-size: 2vw; }
-            main { max-width: 90vw; }
-            h2 { font-size: 3vw; }
-            .section { scroll-margin-top: 10vw; }
-            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2 { border-radius: 0.5em; }
-            .etiquette, .badge { font-size: 1.7vw; }
-            .valeur { font-size: 2.3vw; }
-            .grille3, .grille2 { gap: 7px; }
+        @keyframes mis-en-evidence{
+            0%{
+                transform: scale(1);
+            }
+            40%{ 
+                transform: scale(1.1); 
+            }
+            100%{ 
+                transform: scale(1); 
+            }
         }
 
-        @media (min-width: 768px) and (max-width: 1023px) {
-            #texte-titre { font-size: 3vw; }
-            #navigateur { gap: 2vw; }
-            .texte-navigateur, th, td, li, footer { font-size: 1.5vw; }
-            main { max-width: 80vw; }
-            h2 { font-size: 2.7vw; }
-            .section { scroll-margin-top: 9vw; }
-            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2 { border-radius: 0.5em; }
-            .etiquette, .badge { font-size: 1.3vw; }
-            .valeur { font-size: 1.8vw; }
-            .grille3, .grille2 { gap: 10px; }
+        @keyframes bordure-evidence{
+            0%{ 
+                outline: 2px solid #5e7d8aab;
+                outline-offset: 0.3vw; 
+            }
+            90%{ 
+                outline: 1px solid #5e7d8aab; 
+                outline-offset: 0.3vw; 
+            }
+            100%{ 
+                outline: 0; 
+                outline-offset: 0; 
+            }
+        }
+
+        @keyframes bordure-evidence-err{
+            0%{ 
+                outline: 2px solid var(--err); 
+                outline-offset: 0.3vw; 
+            }
+            90%{ 
+                outline: 1px solid var(--err); 
+                outline-offset: 0.3vw; 
+            }
+            100%{ 
+                outline: 0; 
+                outline-offset: 0; 
+            }
+        }
+
+        @keyframes entrer-nav-text{
+            0%{ 
+                top: 100px; 
+                opacity: 0; 
+            }
+            100%{ 
+                top: 0; 
+                opacity: 1; 
+            }
+        }
+        
+
+        @media (max-width: 767px){
+            #texte-titre{ 
+                font-size: 4vw;
+            }
+            #navigateur{ 
+                gap: 1vw; 
+            }
+            .texte-navigateur, th, td, li, footer{ 
+                font-size: 2vw; 
+            }
+            main{ 
+                max-width: 95vw; 
+            }
+            h2{
+                font-size: 3vw; 
+            }
+            .section{ 
+                scroll-margin-top: 10vw;
+            }
+            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2{ 
+                border-radius: 0.5em;
+            }
+            .etiquette, .badge{
+                font-size: 1.7vw;
+            }
+            .valeur{
+                font-size: 2.3vw;
+            }
+            .grille3, .grille2{
+                gap: 7px;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px){
+            #texte-titre{ 
+                font-size: 3vw; 
+            }
+            #navigateur{
+                gap: 2vw; 
+            }
+            .texte-navigateur, th, td, li, footer{
+                font-size: 1.5vw; 
+            }
+            main{
+                max-width: 90vw;
+            }
+            h2{
+                font-size: 2.7vw;
+            }
+            .section{
+                scroll-margin-top: 9vw;
+            }
+            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2 {
+                border-radius: 0.5em;
+            }
+            .etiquette, .badge{
+                font-size: 1.3vw;
+            }
+            .valeur{ 
+                font-size: 1.8vw;
+            }
+            .grille3, .grille2{
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -314,8 +453,15 @@ PAGE_MODELE = r"""
         <iframe src="donnees_systeme.html" name="zone-donnees" style="width:100%; height:100vh; border:none; scroll-margin-top: 7vw;"></iframe>
     </main>
     <footer>
-        Généré le <span class="valeur">%%DATE_HEURE%%</span>
+        Généré le <span class="valeur">%%DATE%%</span>
+        <a id="bouton-rafraichir" href="donnees_systeme.html" target="zone-donnees">Rafraîchir les données
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" id="logo-rafraichir" viewBox="0 0 16 16">
+                <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/>
+                <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
+            </svg>
+        </a>
     </footer>
+    <hr/>
 </body>
 </html>"""
 
@@ -324,44 +470,45 @@ PAGE_DONNEES = r"""
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="2">
     <title>Données système</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="icon" href="https://friconix.com/png/fi-cnsuxx-linux.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Audiowide&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap">
     <style>
-        :root {
+        :root{
             --ok: #1f9d55;
             --warn: #c07f00;
             --err: #d64545;
             --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
         }
 
-        html, body {
+        html, body{
             margin: 0;
             padding: 0;
             background-color: rgb(11, 16, 32);
             font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif;
             scroll-behavior: smooth; 
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
-        main {
+        main{
             max-width: 55vw;
             margin: 0 auto;
             padding: 1vw 0;
         }
 
-        h2 {
+        h2{
             display: inline-block;
             color: #287da1;
         }
 
-        .section {
+        section{
             scroll-margin-top: 7vw;
         }
 
-        .bloc {
+        .bloc{
             background-color: rgba(24, 35, 58, 0.733);
             padding: 1vw;
             border-radius: 1em;
@@ -370,7 +517,7 @@ PAGE_DONNEES = r"""
             flex-direction: column;
         }
 
-        .bloc-table {
+        .bloc-table{
             background-color: rgba(24, 35, 58, 0);
             padding-bottom: 1vw;
             border-radius: 1em;
@@ -378,8 +525,10 @@ PAGE_DONNEES = r"""
             display: flex;
             flex-direction: column;
         }
-
-        .bloc-erreurs {
+        #erreurs{
+            margin-bottom: 20%;
+        }
+        .bloc-erreurs{
             border-left: 3px solid var(--err);
             padding: 1vw;
             border-radius: 1em;
@@ -387,58 +536,58 @@ PAGE_DONNEES = r"""
             margin-bottom: 1vw;
         }
 
-        .etiquette {
+        .etiquette{
             color: #91c2d89a;
             font-family: var(--mono);
             padding-bottom: 1vw;
             user-select: none;
         }
 
-        .valeur {
+        .valeur{
             color: #c9d1ff;
             font-family: var(--mono);
         }
 
-        .grille3 {
+        .grille3{
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 16px;
             border-radius: 1em;
         }
 
-        .grille2 {
+        .grille2{
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
             border-radius: 1em;
         }
 
-        table {
+        table{
             width: 100%;
             border-collapse: collapse;
         }
 
-        th, td {
+        th, td{
             padding: 1vw;
             border-bottom: 1px solid #1c2347;
             text-align: left;
             color: #c9d1ff;
         }
 
-        th {
+        th{
             color: #c9d1ff;
         }
 
-        li {
+        li{
             color: #c9d1ff;
         }
 
-        ul, ol {
+        ul, ol{
             margin-left: 1vw;
             padding-left: 1.2rem;
         }
 
-        .badge {
+        .badge{
             display: inline-block;
             padding: 0.15rem 0.5rem;
             border-radius: 3em;
@@ -449,52 +598,139 @@ PAGE_DONNEES = r"""
             color: #a8b0d9;
         }
 
-        .ok {
+        .ok{
             color: #d6ffe6;
             border-color: rgba(31,157,85,.45);
             background: rgba(31,157,85,.08);
         }
 
-        .warn {
+        .warn{
             color: #fff4d6;
             border-color: rgba(192,127,0,.45);
             background: rgba(192,127,0,.08);
         }
 
-        .err {
+        .err{
             color: #ffe1e1;
             border-color: rgba(214,69,69,.45);
             background: rgba(214,69,69,.08);
         }
-        section:target {
+        section:target{
             animation: mis-en-evidence 0.3s ease-out;
         }
 
-        section:target .grille3,
-        section:target .grille2,
-        section:target .bloc-table {
+        section:target .grille3,  section:target .grille2, section:target .bloc-table{
             animation: bordure-evidence 1s linear;
         }
 
-        section:target .bloc-erreurs {
+        section:target .bloc-erreurs{
             animation: bordure-evidence-err 1s linear;
         }
-        @keyframes mis-en-evidence {
-            0% { transform: scale(1); }
-            40% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+        @keyframes mis-en-evidence{
+            0%{
+                transform: scale(1);
+            }
+            40%{
+                transform: scale(1.1);
+            }
+            100%{
+                transform: scale(1);
+            }
         }
 
         @keyframes bordure-evidence {
-            0% { outline: 2px solid #5e7d8aab; outline-offset: 0.3vw; }
-            90% { outline: 1px solid #5e7d8aab; outline-offset: 0.3vw; }
-            100% { outline: 0; outline-offset: 0; }
+            0%{
+                outline: 2px solid #5e7d8aab; 
+                outline-offset: 0.3vw; 
+            }
+            90%{ 
+                outline: 1px solid #5e7d8aab; 
+                outline-offset: 0.3vw; 
+            }
+            100%{ 
+                outline: 0; 
+                outline-offset: 0; 
+            }
         }
 
         @keyframes bordure-evidence-err {
-            0% { outline: 2px solid var(--err); outline-offset: 0.3vw; }
-            90% { outline: 1px solid var(--err); outline-offset: 0.3vw; }
-            100% { outline: 0; outline-offset: 0; }
+            0%{ 
+                outline: 2px solid var(--err); 
+                outline-offset: 0.3vw; 
+            }
+            90%{ 
+                outline: 1px solid var(--err); 
+                outline-offset: 0.3vw;
+            }
+            100%{ 
+                outline: 0; 
+                outline-offset: 0; 
+            }
+        }
+        @media (max-width: 767px){
+            #texte-titre{ 
+                font-size: 4vw;
+            }
+            #navigateur{ 
+                gap: 1vw; 
+            }
+            .texte-navigateur, th, td, li, footer{ 
+                font-size: 2vw; 
+            }
+            main{ 
+                max-width: 100vw; 
+            }
+            h2{
+                font-size: 3vw; 
+            }
+            .section{ 
+                scroll-margin-top: 10vw;
+            }
+            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2{ 
+                border-radius: 0.5em;
+            }
+            .etiquette, .badge{
+                font-size: 1.7vw;
+            }
+            .valeur{
+                font-size: 2.3vw;
+            }
+            .grille3, .grille2{
+                gap: 7px;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1700px){
+            #texte-titre{ 
+                font-size: 3vw; 
+            }
+            #navigateur{
+                gap: 2vw; 
+            }
+            .texte-navigateur, th, td, li, footer{
+                font-size: 1.5vw; 
+            }
+            main{
+                max-width: 80vw;
+            }
+            h2{
+                font-size: 2.7vw;
+            }
+            .section{
+                scroll-margin-top: 9vw;
+            }
+            .bloc, .bloc-table, .bloc-erreurs, .grille3, .grille2 {
+                border-radius: 0.5em;
+            }
+            .etiquette, .badge{
+                font-size: 1.3vw;
+            }
+            .valeur{ 
+                font-size: 1.8vw;
+            }
+            .grille3, .grille2{
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -631,6 +867,7 @@ PAGE_DONNEES = r"""
 </html>
 """
 
+
 JETONS_BRUTS = {
     "LIGNES_TEMPERATURES",
     "ELEMENTS_ALIM",
@@ -641,6 +878,7 @@ JETONS_BRUTS = {
     "LIGNES_WEB",
     "ELEMENTS_ERREURS",
 }
+
 
 def faire_rapport(modele: str, jetons: dict) -> str:
     rendu = modele
@@ -653,12 +891,14 @@ def faire_rapport(modele: str, jetons: dict) -> str:
     rendu = re.sub(r"%%[A-Z0-9_]+%%", "", rendu)
     return rendu
 
+
 def lire_fichier(chemin: str):
     try:
         with open(chemin, "r", encoding="utf-8", errors="ignore") as f:
             return f.read().strip(), None
     except Exception as err:
         return None, f"{chemin}: {err}"
+
 
 def format_duree(sec_f: float) -> str:
     s = int(sec_f)
@@ -668,6 +908,7 @@ def format_duree(sec_f: float) -> str:
     if j > 0:
         return f"{j} jours, {h:02d}:{m:02d}:{s:02d}"
     return f"{h:02d}:{m:02d}:{s:02d}"
+
 
 def lire_memoire():
     txt, err = lire_fichier("/proc/meminfo")
@@ -701,6 +942,7 @@ def lire_memoire():
         "MEM_LIBRE_CACHE": f"{libre_cache:.1f} Go",
     }, None
 
+
 def prendre_temperatures() -> str:
     lignes = []
     zones = sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp"))
@@ -713,10 +955,11 @@ def prendre_temperatures() -> str:
             nom = Path(tz).parent.name
             lignes.append("<tr><td>"f"{nom}</td><td>{t_c:.1f} °C</td>""<td><span class='badge ok'>OK</span></td></tr>")
         except Exception:
-            lignes.append("<tr><td>{}</td><td style='color:#d64545'>Impossible de lire la température</td>""<td><span class='badge err'>Erreur</span></td></tr>")
+            lignes.append("<tr><td>capteur inconnu</td>""<td style='color:#d64545'>Impossible de lire la température</td>""<td><span class='badge err'>Erreur</span></td></tr>")
     if not lignes:
-        lignes.append("<tr><td>—</td><td style='color:#d64545'>Aucun capteur détecté</td>""<td><span class='badge err'>Erreur</span></td></tr>")
+        lignes.append("<tr><td><span style='color:#d64545'>Donnée introuvable</span></td>""<td style='color:#d64545'>Aucun capteur détecté</td>""<td><span class='badge err'>Erreur</span></td></tr>")
     return "\n".join(lignes)
+
 
 def prendre_alim() -> str:
     lignes = []
@@ -728,15 +971,16 @@ def prendre_alim() -> str:
             with open(f"{bat}/status", "r") as f:
                 etat = f.read().strip()
         except Exception:
-            etat = "N/A"
+            etat = "<span style='color:#d64545'>Donnée introuvable</span>"
         try:
             with open(f"{bat}/capacity", "r") as f:
                 cap = f.read().strip()
         except Exception:
-            cap = "N/A"
+            cap = "<span style='color:#d64545'>Donnée introuvable</span>"
         nom = Path(bat).name
         lignes.append(f"<li>{nom}: {etat} — {cap}%</li>")
     return "\n".join(lignes)
+
 
 def prendre_disques() -> str:
     try:
@@ -751,12 +995,18 @@ def prendre_disques() -> str:
             parts = line.split()
             if len(parts) >= 7:
                 dev, fstype, size, used, free, pcent, mnt = parts[:7]
-                lignes.append("<tr>"f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"f"<td>{free}</td><td>{fstype}</td>""</tr>")
+                lignes.append(
+                    "<tr>"
+                        f"<td>{dev}</td><td>{mnt}</td><td>{pcent}</td>"
+                        f"<td>{free}</td><td>{fstype}</td>"
+                    "</tr>"
+                )
         if not lignes:
-            return "<tr><td colspan='5'>N/A</td></tr>"
+            return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
         return "\n".join(lignes)
     except Exception:
-        return "<tr><td colspan='5'>N/A</td></tr>"
+        return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
+
 
 def prendre_processus() -> str:
     try:
@@ -772,12 +1022,19 @@ def prendre_processus() -> str:
             if len(parts) >= 11:
                 user, pid, cpu, mem, vsz, rss, tty, stat, start, t, cmd = parts
                 cmd_ok = html.escape(cmd)[:120]
-                lignes.append("<tr>"f"<td>{pid}</td><td>{user}</td>"f"<td>{cpu}%</td><td>{mem}%</td>"f"<td>{cmd_ok}</td>""</tr>")
+                lignes.append(
+                    "<tr>"
+                        f"<td>{pid}</td><td>{user}</td>"
+                        f"<td>{cpu}%</td><td>{mem}%</td>"
+                        f"<td>{cmd_ok}</td>"
+                    "</tr>"
+                )
         if not lignes:
-            return "<tr><td colspan='5'>N/A</td></tr>"
+            return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
         return "\n".join(lignes)
     except Exception:
-        return "<tr><td colspan='5'>N/A</td></tr>"
+        return ("<tr><td colspan='5'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
+
 
 def prendre_interfaces() -> str:
     ip4 = {}
@@ -821,15 +1078,40 @@ def prendre_interfaces() -> str:
         ip_v4 = ", ".join(ip4.get(nom, [])) or "—"
         ip_v6 = ", ".join(ip6.get(nom, [])) or "—"
         rx, tx = rxtx.get(nom, (0, 0))
+
         try:
             with open(f"/sys/class/net/{nom}/operstate", "r") as f:
-                etat = f.read().strip()
+                brut = f.read().strip()
         except Exception:
-            etat = "N/A"
-        lignes.append("<tr>"f"<td>{nom}</td>"f"<td>{ip_v4}</td>"f"<td>{ip_v6}</td>"f"<td>{rx//1024}K / {tx//1024}K</td>"f"<td><span class='badge'>{etat}</span></td>""</tr>")
+            brut = ""
+
+        if nom == "lo" and brut == "unknown":
+            etat_texte = "Boucle locale"
+            classe = "warn"
+        elif brut == "up":
+            etat_texte = "Actif"
+            classe = "ok"
+        elif brut == "down":
+            etat_texte = "Inactif"
+            classe = "err"
+        else:
+            etat_texte = brut or "Inconnu"
+            classe = "err"
+
+        lignes.append(
+            "<tr>"
+                f"<td>{nom}</td>"
+                f"<td>{ip_v4}</td>"
+                f"<td>{ip_v6}</td>"
+                f"<td>{rx//1024}K / {tx//1024}K</td>"
+                f"<td><span class='badge {classe}'>{etat_texte}</span></td>"
+            "</tr>"
+        )
+
     if not lignes:
         return "<tr><td colspan='5'>N/A</td></tr>"
     return "\n".join(lignes)
+
 
 def prendre_connexions() -> str:
     try:
@@ -846,29 +1128,109 @@ def prendre_connexions() -> str:
             return "<li style='color:#d64545'>Aucune connexion</li>"
         return "\n".join(lignes)
     except Exception:
-        return "<li>N/A</li>"
+        return "<li><span style='color:#d64545'>Donnée introuvable</span></li>"
+
+
+def analyser_ligne_ss(ligne):
+    try:
+        parts = ligne.split()
+        if len(parts) < 5:
+            return None, None
+        local = parts[3]
+        if ":" not in local:
+            return None, None
+        host_part, port = local.rsplit(":", 1)
+        host = host_part
+        if host in ("*", "0.0.0.0", "[::]", "::"):
+            host = "127.0.0.1"
+        host = host.strip("[]")
+        return host, port
+    except Exception:
+        return None, None
+
+
+def sonder_service_http(hote: str, port: str, use_https: bool = False):
+    titre_page = "Titre indisponible"
+    chemin_favicon = "Favicon inconnu"
+    nom_serveur = "Inconnu"
+    statut_http = "N/A"
+    protocole = "HTTP"
+    delai = 2
+    if use_https:
+        try:
+            contexte = ssl._create_unverified_context()
+            connexion = http.client.HTTPSConnection(hote, int(port), timeout=delai, context=contexte)
+            protocole = "HTTPS"
+        except Exception as e:
+            return titre_page, chemin_favicon, nom_serveur, protocole, statut_http
+    else:
+        try:
+            connexion = http.client.HTTPConnection(hote, int(port), timeout=delai)
+            protocole = "HTTP"
+        except Exception:
+            return titre_page, chemin_favicon, nom_serveur, protocole, statut_http
+
+    try:
+        connexion.request("GET", "/")
+        reponse = connexion.getresponse()
+        statut_http = str(reponse.status)
+        nom_serveur = reponse.getheader("Server") or "Inconnu"
+        corps = reponse.read(4096).decode("utf-8", errors="ignore")
+
+        debut_titre = corps.lower().find("<title>")
+        fin_titre = corps.lower().find("</title>")
+
+        if debut_titre != -1 and fin_titre != -1 and fin_titre > debut_titre:
+            brut = corps[debut_titre + 7:fin_titre]
+            titre_page = brut.strip()
+        chemin_favicon = "/favicon.ico"
+
+    except Exception:
+        pass
+    finally:
+        try:
+            connexion.close()
+        except Exception:
+            pass
+    return titre_page, chemin_favicon, nom_serveur, protocole, statut_http
 
 def prendre_web() -> str:
     lignes = []
     try:
-        res = subprocess.run(
-            ["ss", "-ntlp"],
-            capture_output=True,
-            text=True,
-            timeout=2,
-        )
+        res = subprocess.run(["ss", "-ntlp"],capture_output=True,text=True,timeout=2,)
+        deja_vus = set()
         for ligne in res.stdout.splitlines():
             if ":80 " in ligne or ":443 " in ligne:
-                lignes.append("<tr>"f"<td>{html.escape(ligne)}</td>""<td>—</td><td>—</td><td>—</td><td>—</td>""<td><span class='badge ok'>OK</span></td>""</tr>")
+                host, port = analyser_ligne_ss(ligne)
+                if not host or not port:
+                    continue
+                cle = (host, port)
+                if cle in deja_vus:
+                    continue
+                deja_vus.add(cle)
+                use_https = (port == "443")
+                titre, favicon, serveur, proto_tls, statut = sonder_service_http(host, port, use_https=use_https)
+                lignes.append(
+                    "<tr>"
+                        f"<td>{html.escape(host)}:{port}</td>"
+                        f"<td>{html.escape(titre)}</td>"
+                        f"<td>{html.escape(favicon)}</td>"
+                        f"<td>{html.escape(serveur)}</td>"
+                        f"<td>{html.escape(proto_tls)}</td>"
+                        f"<td><span class='badge ok'>{html.escape(statut)}</span></td>"
+                    "</tr>"
+                )
         if not lignes:
-            return "<tr><td colspan='6' style='color:#d64545'>Aucun service web détecté</td></tr>"
+            return ("<tr><td colspan='6' style='color:#d64545'>""Aucun service web détecté</td></tr>")
         return "\n".join(lignes)
     except Exception:
-        return "<tr><td colspan='6'>N/A</td></tr>"
+        return ("<tr><td colspan='6'>""<span style='color:#d64545'>Donnée introuvable</span></td></tr>")
 
-def prendre_tout():
+
+def prendre_tout(options=None):
     erreurs = []
     date_heure = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
 
     nom_hote, err = lire_fichier("/proc/sys/kernel/hostname")
     if err:
@@ -894,32 +1256,69 @@ def prendre_tout():
             duree = "n/a"
             erreurs.append(f"/proc/uptime: {e}")
 
-    mem, err = lire_memoire()
-    if err:
-        erreurs.append(err)
+    if options and getattr(options, "sans_memoire", False):
         mem = {
-            "MEM_TOTALE": "Donnée non disponible",
-            "MEM_UTILISEE": "Donnée non disponible",
-            "MEM_UTILISEE_PCT": "Donnée non disponible",
-            "MEM_LIBRE_CACHE": "Donnée non disponible",
+            "MEM_TOTALE": "Section désactivée",
+            "MEM_UTILISEE": "Section désactivée",
+            "MEM_UTILISEE_PCT": "Section désactivée",
+            "MEM_LIBRE_CACHE": "Section désactivée",
         }
+    else:
+        mem, err = lire_memoire()
+        if err:
+            erreurs.append(err)
+            mem = {
+                "MEM_TOTALE": "Donnée non disponible",
+                "MEM_UTILISEE": "Donnée non disponible",
+                "MEM_UTILISEE_PCT": "Donnée non disponible",
+                "MEM_LIBRE_CACHE": "Donnée non disponible",
+            }
+
+    if options and getattr(options, "sans_materiel", False):
+        lignes_t = ("<tr><td colspan='3'>Section désactivée par les paramètres</td></tr>")
+        elements_alim = ("<li>Section désactivée par les paramètres</li>")
+    else:
+        lignes_t = prendre_temperatures()
+        elements_alim = prendre_alim()
+    if options and getattr(options, "sans_disques", False):
+        lignes_disques = ("<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>")
+    else:
+        lignes_disques = prendre_disques()
+
+    if options and getattr(options, "sans_processus", False):
+        lignes_processus = ("<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>")
+    else:
+        lignes_processus = prendre_processus()
+
+    if options and getattr(options, "sans_reseau", False):
+        lignes_interfaces = ("<tr><td colspan='5'>Section désactivée par les paramètres</td></tr>")
+        elements_connexions = ("<li>Section désactivée par les paramètres</li>")
+    else:
+        lignes_interfaces = prendre_interfaces()
+        elements_connexions = prendre_connexions()
+
+    if options and getattr(options, "sans_web", False):
+        lignes_web = ("<tr><td colspan='6'>Section désactivée par les paramètres</td></tr>")
+    else:
+        lignes_web = prendre_web()
 
     jetons = {
         "NOM_HOTE": nom_hote,
         "DATE_HEURE": date_heure,
+        "DATE": date,
         "NOYAU": noyau,
         "DUREE_FONCTIONNEMENT": duree,
         "MEM_TOTALE": mem["MEM_TOTALE"],
         "MEM_UTILISEE": mem["MEM_UTILISEE"],
         "MEM_UTILISEE_PCT": mem["MEM_UTILISEE_PCT"],
         "MEM_LIBRE_CACHE": mem["MEM_LIBRE_CACHE"],
-        "LIGNES_TEMPERATURES": prendre_temperatures(),
-        "ELEMENTS_ALIM": prendre_alim(),
-        "LIGNES_DISQUES": prendre_disques(),
-        "LIGNES_PROCESSUS": prendre_processus(),
-        "LIGNES_INTERFACES": prendre_interfaces(),
-        "ELEMENTS_CONNEXIONS": prendre_connexions(),
-        "LIGNES_WEB": prendre_web(),
+        "LIGNES_TEMPERATURES": lignes_t,
+        "ELEMENTS_ALIM": elements_alim,
+        "LIGNES_DISQUES": lignes_disques,
+        "LIGNES_PROCESSUS": lignes_processus,
+        "LIGNES_INTERFACES": lignes_interfaces,
+        "ELEMENTS_CONNEXIONS": elements_connexions,
+        "LIGNES_WEB": lignes_web,
         "ELEMENTS_ERREURS": (
             "\n".join(f"<li>{html.escape(e)}</li>" for e in erreurs)
             if erreurs
@@ -930,28 +1329,45 @@ def prendre_tout():
 
 def main():
     parseur = argparse.ArgumentParser()
-    parseur.add_argument("--page","--sortie",dest="page",default="rapport_supkrellm.html")
-    parseur.add_argument("--donnees",default="donnees_systeme.html")
-    parseur.add_argument("--intervalle",type=float,default=2.0)
+    parseur.add_argument("--page", dest="page", default="rapport_supkrellm.html")
+    parseur.add_argument("--donnees", default="donnees_systeme.html")
+    parseur.add_argument("--intervalle", type=float, default=2.0)
+    parseur.add_argument("--dossier", default=".")
+    parseur.add_argument("--gui")
+
+    parseur.add_argument("--sans-memoire", action="store_true")
+    parseur.add_argument("--sans-disques", action="store_true")
+    parseur.add_argument("--sans-processus", action="store_true")
+    parseur.add_argument("--sans-reseau", action="store_true")
+    parseur.add_argument("--sans-web", action="store_true")
+    parseur.add_argument("--sans-materiel", action="store_true")
+
     args = parseur.parse_args()
+    base = Path(args.dossier)
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    page_path = base / args.page
+    donnees_path = base / args.donnees
     modele_page = PAGE_MODELE
     modele_donnees = PAGE_DONNEES
-    jetons_init = prendre_tout()
+    jetons_init = prendre_tout(args)
     rendu_page = faire_rapport(modele_page, jetons_init)
-    Path(args.page).write_text(rendu_page, encoding="utf-8")
-    print(f"Page principale -> {Path(args.page).resolve()}")
+    page_path.write_text(rendu_page, encoding="utf-8")
+    print(f"Rapport -> {page_path.resolve()}")
 
     try:
         while True:
-            jetons = prendre_tout()
+            jetons = prendre_tout(args)
             rendu_donnees = faire_rapport(modele_donnees, jetons)
-            donnees_path = Path(args.donnees)
             tmp_path = donnees_path.with_suffix(donnees_path.suffix + ".tmp")
             tmp_path.write_text(rendu_donnees, encoding="utf-8")
             tmp_path.replace(donnees_path)
             time.sleep(args.intervalle)
     except KeyboardInterrupt:
-        print("Arrêt demandé par l'utilisateur.")
+        print("L'arrêt a était demandé.")
 
 if __name__ == "__main__":
     main()
