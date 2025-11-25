@@ -28,7 +28,7 @@ def lancer_interface_graphique():
     scrollbar.pack(side="right", fill="y")
     scrollble_zone.pack(side="left", fill="both", expand=True)
     scrollble_zone.configure(yscrollcommand=scrollbar.set, bg="#0b1020")
-c
+
     window = ttk.Frame(scrollble_zone)
     scrollble_zone.create_window((0, 0), window=window, anchor="nw")  
     window.pack(fill="both", expand=True)
