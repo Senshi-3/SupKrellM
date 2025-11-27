@@ -6,22 +6,12 @@ from tkinter.scrolledtext import ScrolledText
 import webbrowser
 import argparse
 
-def afficher_bloc(parent, titre, contenu):
-    ttk.Label(parent, text=titre, style="TLabel").pack(anchor="w", padx=10, pady=(10, 0))
-    zone = ScrolledText(parent, height=6, wrap="word", font=("Consolas", 10), fg="black", bg="white")
-    zone.insert("1.0", contenu)
-    zone.configure(state="disabled")
-    zone.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
 def lancer_interface_graphique():
     root = Tk()
-    try:
-        root.state('zoomed')
-    except:
-        root.attributes('-fullscreen', True)
-
-    root.title("rapport_html")
-    root.resizable(True,True)
+    root.geometry('620x500')
+    root.title("Rapport Système")
+    root.resizable(False,True)
 
     scrollble_zone = Canvas(root)
     scrollbar = Scrollbar(root, orient="vertical", command=scrollble_zone.yview)
@@ -31,7 +21,6 @@ def lancer_interface_graphique():
 
     window = ttk.Frame(scrollble_zone)
     scrollble_zone.create_window((0, 0), window=window, anchor="nw")  
-    window.pack(fill="both", expand=True)
     
     style = ttk.Style()
     style.theme_use("default")
@@ -55,13 +44,8 @@ def lancer_interface_graphique():
     label_maj = ttk.Label(window, text="", style="TLabel")
     label_maj.pack(pady=(0, 10))
 
-    def remonter():
-        scrollble_zone.yview_moveto(0)
-
-    ttk.Button(window, text="Haut", command=remonter).pack(pady=5)
-
     def descendre():
-        scrollble_zone.yview_moveto(1)
+        scrollble_zone.yview_moveto(1) 
 
     ttk.Button(window, text="Bas", command=descendre).pack(pady=5)
     
@@ -76,20 +60,37 @@ def lancer_interface_graphique():
     "ELEMENTS_ERREURS",
     }
 
+    zones_scrolled = []
+
     cadre_contenu = ttk.Frame(window)
     cadre_contenu.pack(fill="both", expand=True)
 
+    def afficher_bloc(parent, titre, contenu):
+        ttk.Label(parent, text=titre, style="TLabel").pack(anchor="w", padx=10, pady=(10, 0))
+        zone = ScrolledText(parent, height=6, wrap="word", font=("Consolas", 10), fg="black", bg="white")
+        zone.insert("1.0", contenu)
+        zone.configure(state="disabled")
+        zone.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        zones_scrolled.append(zone)
+
     def mettre_a_jour():
+        jeton = prendre_tout()
+        increment = 0
+        for cle, val in jeton.items():
+            zones_scrolled[increment].delete("1.0", "end")
+            zones_scrolled[increment].insert("1.0", val if cle in JETONS_BRUTS else str(val))
+            increment += 1
+
+    def init():
         jeton = prendre_tout()
         for widget in cadre_contenu.winfo_children():
             widget.destroy()
+        zones_scrolled.clear()
         for cle, val in jeton.items():
                 afficher_bloc(cadre_contenu, cle.replace("_", " ").title(), val if cle in JETONS_BRUTS else str(val))
     
         label_maj.config(text=f"Dernière mise à jour : {datetime.now().strftime('%H:%M')}")
         root.after(2000, mettre_a_jour)
-
-    ttk.Button(window, text="Rafraîchir", command=mettre_a_jour).pack(pady=5)
         
 
     def exporter_html():
@@ -111,12 +112,17 @@ def lancer_interface_graphique():
     fichier_menu.add_separator()
     fichier_menu.add_command(label="Quitter", command=root.quit)
     menubar.add_cascade(label="Fichier", menu=fichier_menu)
+
+    def remonter():
+        scrollble_zone.yview_moveto(0) 
+    
+    ttk.Button(window, text="Haut", command=remonter).pack(pady=5)
     
     def ajuster_fenetre(_):
         scrollble_zone.configure(scrollregion=scrollble_zone.bbox("all"))
 
     window.bind("<Configure>", ajuster_fenetre)
-    mettre_a_jour()
+    init()
     root.mainloop()
 
 if __name__ == "__main__":
