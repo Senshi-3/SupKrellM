@@ -1,0 +1,43 @@
+Bonus ajoutés à l’interface graphique:
+
+1. Boutons de navigation globale:
+Ajout de deux boutons : Haut et Bas.
+
+Fonction : permettent de défiler rapidement tout le contenu du rapport (Canvas complet).
+
+Apport : améliore l’ergonomie et la lisibilité lorsque le rapport contient beaucoup de données.
+
+2. Changement de thème (mode sombre/clair)
+Bouton Changer thème qui bascule dynamiquement les couleurs via ttk.Style.
+
+Deux modes disponibles :
+
+Mode sombre (fond bleu foncé, texte blanc).
+
+Mode clair (fond blanc, texte noir).
+
+Apport : accessibilité renforcée et confort visuel pour l’utilisateur.
+
+3. Affichage de l’heure de dernière mise à jour
+Label indiquant : “Dernière mise à jour : HH:MM”.
+
+Apport : clarté et professionnalisme, l’utilisateur sait exactement quand les données ont été rafraîchies.
+
+4. Rafraîchissement manuel
+Bouton Rafraîchir qui relance immédiatement la fonction mettre_a_jour().
+
+Apport : permet à l’utilisateur de forcer une mise à jour sans attendre le cycle automatique.
+
+5. Export HTML depuis l’interface
+Menu Fichier → Exporter HTML qui génère rapport.html et l’ouvre automatiquement dans le navigateur.
+
+Apport : confort d’utilisation, pas besoin de relancer le script en mode console.
+
+6. Menu Fichier complet
+Options disponibles :
+
+Exporter HTML
+
+Quitter
+
+Apport : professionnalisme, conforme aux standards des applications graphiques.
